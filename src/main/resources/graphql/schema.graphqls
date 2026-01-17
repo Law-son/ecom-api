@@ -1,0 +1,111 @@
+type Query {
+  productById(id: ID!): Product
+  products(
+    categoryId: ID
+    search: String
+    page: Int
+    size: Int
+    sortBy: String
+    sortDir: String
+  ): [Product!]!
+  categories: [Category!]!
+  users: [User!]!
+  ordersByUser(userId: ID!, page: Int, size: Int): [Order!]!
+  reviewsByProduct(productId: ID!): [Review!]!
+}
+
+type Mutation {
+  createProduct(input: ProductInput!): Product
+  createCategory(input: CategoryInput!): Category
+  createOrder(input: OrderCreateInput!): Order
+  addReview(input: ReviewCreateInput!): Review
+}
+
+type User {
+  id: ID!
+  fullName: String!
+  email: String!
+  role: String!
+  createdAt: String
+  lastLogin: String
+}
+
+type Category {
+  id: ID!
+  name: String!
+  createdAt: String
+}
+
+type Product {
+  id: ID!
+  categoryId: ID
+  categoryName: String
+  name: String!
+  description: String
+  price: Float!
+  imageUrl: String
+  avgRating: Float
+  reviewCount: Int
+  createdAt: String
+}
+
+type Inventory {
+  productId: ID!
+  quantity: Int!
+  lastUpdated: String
+}
+
+type Order {
+  id: ID!
+  userId: ID!
+  status: String!
+  totalAmount: Float!
+  orderDate: String
+  items: [OrderItem!]!
+}
+
+type OrderItem {
+  productId: ID!
+  productName: String
+  quantity: Int!
+  priceAtTime: Float!
+}
+
+type Review {
+  id: ID!
+  userId: ID!
+  productId: ID!
+  rating: Int!
+  comment: String
+  createdAt: String
+}
+
+input ProductInput {
+  categoryId: ID!
+  name: String!
+  description: String
+  price: Float!
+  imageUrl: String
+}
+
+input CategoryInput {
+  name: String!
+}
+
+input OrderItemInput {
+  productId: ID!
+  quantity: Int!
+}
+
+input OrderCreateInput {
+  userId: ID!
+  items: [OrderItemInput!]!
+}
+
+input ReviewCreateInput {
+  userId: ID!
+  productId: ID!
+  rating: Int!
+  comment: String
+}
+
