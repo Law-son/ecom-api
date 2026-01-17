@@ -5,6 +5,7 @@ import com.eyarko.ecom.dto.ProductRequest;
 import com.eyarko.ecom.dto.ProductResponse;
 import com.eyarko.ecom.service.ProductService;
 import com.eyarko.ecom.util.ResponseUtil;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,14 +30,14 @@ public class ProductController {
     }
 
     @PostMapping
-    public ApiResponse<ProductResponse> createProduct(@RequestBody ProductRequest request) {
+    public ApiResponse<ProductResponse> createProduct(@Valid @RequestBody ProductRequest request) {
         return ResponseUtil.success("Product created", productService.createProduct(request));
     }
 
     @PutMapping("/{id}")
     public ApiResponse<ProductResponse> updateProduct(
         @PathVariable Long id,
-        @RequestBody ProductRequest request
+        @Valid @RequestBody ProductRequest request
     ) {
         return ResponseUtil.success("Product updated", productService.updateProduct(id, request));
     }

@@ -5,6 +5,7 @@ import com.eyarko.ecom.dto.UserCreateRequest;
 import com.eyarko.ecom.dto.UserResponse;
 import com.eyarko.ecom.service.UserService;
 import com.eyarko.ecom.util.ResponseUtil;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,7 +24,7 @@ public class UserController {
     }
 
     @PostMapping
-    public ApiResponse<UserResponse> createUser(@RequestBody UserCreateRequest request) {
+    public ApiResponse<UserResponse> createUser(@Valid @RequestBody UserCreateRequest request) {
         return ResponseUtil.success("User created", userService.createUser(request));
     }
 

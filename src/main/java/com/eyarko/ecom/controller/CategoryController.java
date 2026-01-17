@@ -5,6 +5,7 @@ import com.eyarko.ecom.dto.CategoryRequest;
 import com.eyarko.ecom.dto.CategoryResponse;
 import com.eyarko.ecom.service.CategoryService;
 import com.eyarko.ecom.util.ResponseUtil;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,14 +26,14 @@ public class CategoryController {
     }
 
     @PostMapping
-    public ApiResponse<CategoryResponse> createCategory(@RequestBody CategoryRequest request) {
+    public ApiResponse<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest request) {
         return ResponseUtil.success("Category created", categoryService.createCategory(request));
     }
 
     @PutMapping("/{id}")
     public ApiResponse<CategoryResponse> updateCategory(
         @PathVariable Long id,
-        @RequestBody CategoryRequest request
+        @Valid @RequestBody CategoryRequest request
     ) {
         return ResponseUtil.success("Category updated", categoryService.updateCategory(id, request));
     }

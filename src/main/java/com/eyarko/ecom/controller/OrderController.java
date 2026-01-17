@@ -5,6 +5,7 @@ import com.eyarko.ecom.dto.OrderCreateRequest;
 import com.eyarko.ecom.dto.OrderResponse;
 import com.eyarko.ecom.service.OrderService;
 import com.eyarko.ecom.util.ResponseUtil;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,7 +28,7 @@ public class OrderController {
     }
 
     @PostMapping
-    public ApiResponse<OrderResponse> createOrder(@RequestBody OrderCreateRequest request) {
+    public ApiResponse<OrderResponse> createOrder(@Valid @RequestBody OrderCreateRequest request) {
         return ResponseUtil.success("Order created", orderService.createOrder(request));
     }
 

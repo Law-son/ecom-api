@@ -5,6 +5,7 @@ import com.eyarko.ecom.dto.ReviewCreateRequest;
 import com.eyarko.ecom.dto.ReviewResponse;
 import com.eyarko.ecom.service.ReviewService;
 import com.eyarko.ecom.util.ResponseUtil;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,7 +24,7 @@ public class ReviewController {
     }
 
     @PostMapping
-    public ApiResponse<ReviewResponse> createReview(@RequestBody ReviewCreateRequest request) {
+    public ApiResponse<ReviewResponse> createReview(@Valid @RequestBody ReviewCreateRequest request) {
         return ResponseUtil.success("Review created", reviewService.createReview(request));
     }
 

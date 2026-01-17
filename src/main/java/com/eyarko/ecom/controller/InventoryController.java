@@ -5,6 +5,7 @@ import com.eyarko.ecom.dto.InventoryAdjustRequest;
 import com.eyarko.ecom.dto.InventoryResponse;
 import com.eyarko.ecom.service.InventoryService;
 import com.eyarko.ecom.util.ResponseUtil;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,7 +23,7 @@ public class InventoryController {
     }
 
     @PostMapping("/adjust")
-    public ApiResponse<InventoryResponse> adjustInventory(@RequestBody InventoryAdjustRequest request) {
+    public ApiResponse<InventoryResponse> adjustInventory(@Valid @RequestBody InventoryAdjustRequest request) {
         return ResponseUtil.success("Inventory updated", inventoryService.adjustInventory(request));
     }
 
