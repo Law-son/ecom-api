@@ -83,6 +83,7 @@ public class OrderService {
             .order(order)
             .product(product)
             .quantity(request.getQuantity())
+            .unitPrice(product.getPrice())
             .priceAtTime(product.getPrice())
             .build();
     }

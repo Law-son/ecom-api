@@ -77,8 +77,12 @@ CREATE TABLE order_items (
     order_id INT NOT NULL REFERENCES orders(order_id) ON DELETE CASCADE,
     product_id INT NOT NULL REFERENCES products(product_id),
     quantity INT NOT NULL CHECK (quantity > 0),
+    unit_price DECIMAL(10, 2) NOT NULL CHECK (unit_price >= 0),
     price_at_time DECIMAL(10, 2) NOT NULL CHECK (price_at_time >= 0)
 );
+
+-- Ensure unit price column exists (legacy databases)
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS unit_price DECIMAL(10, 2) NOT NULL DEFAULT 0;
 
 -- Create Indices for Performance
 
