@@ -2,6 +2,7 @@ package com.eyarko.ecom.service;
 
 import com.eyarko.ecom.dto.UserCreateRequest;
 import com.eyarko.ecom.dto.UserResponse;
+import com.eyarko.ecom.dto.UserUpdateRequest;
 import com.eyarko.ecom.entity.User;
 import com.eyarko.ecom.mapper.UserMapper;
 import com.eyarko.ecom.repository.UserRepository;
@@ -43,5 +44,36 @@ public class UserService {
             .map(UserMapper::toResponse)
             .collect(Collectors.toList());
     }
+
+    public UserResponse updateUser(Long id, UserUpdateRequest request) {
+        User user = userRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (request.getEmail() != null && !request.getEmail().equalsIgnoreCase(user.getEmail())) {
+            if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
+            }
+            user.setEmail(request.getEmail());
+        }
+        if (request.getFullName() != null) {
+            user.setFullName(request.getFullName());
+        }
+        if (request.getPassword() != null) {
+            user.setPasswordHash(request.getPassword());
+        }
+        if (request.getRole() != null) {
+            user.setRole(request.getRole());
+        }
+
+        return UserMapper.toResponse(userRepository.save(user));
+    }
+
+    public void deleteUser(Long id) {
+        if (!userRepository.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
+        userRepository.deleteById(id);
+    }
 }
+
 
