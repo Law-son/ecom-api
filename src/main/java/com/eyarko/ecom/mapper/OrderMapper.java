@@ -5,6 +5,7 @@ import com.eyarko.ecom.dto.OrderResponse;
 import com.eyarko.ecom.entity.Order;
 import com.eyarko.ecom.entity.OrderItem;
 import com.eyarko.ecom.entity.Product;
+import com.eyarko.ecom.entity.User;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,7 +26,7 @@ public final class OrderMapper {
 
         return OrderResponse.builder()
             .id(order.getId())
-            .userId(order.getUser() != null ? order.getUser().getId() : null)
+            .userId(safeUserId(order))
             .status(order.getStatus())
             .totalAmount(order.getTotalAmount())
             .orderDate(order.getOrderDate())
@@ -33,8 +34,22 @@ public final class OrderMapper {
             .build();
     }
 
+    private static Long safeUserId(Order order) {
+        try {
+            User user = order.getUser();
+            return user != null ? user.getId() : null;
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
     private static OrderItemResponse toItemResponse(OrderItem item) {
-        Product product = item.getProduct();
+        Product product;
+        try {
+            product = item.getProduct();
+        } catch (Exception ex) {
+            product = null;
+        }
         return OrderItemResponse.builder()
             .productId(product != null ? product.getId() : null)
             .productName(product != null ? product.getName() : null)
