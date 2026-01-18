@@ -30,7 +30,7 @@ CREATE TABLE users (
 );
 
 -- Optional audit metadata
-ALTER TABLE users ADD COLUMN last_login TIMESTAMP;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;
 
 -- 2. Categories Table
 CREATE TABLE categories (
@@ -51,8 +51,8 @@ CREATE TABLE products (
 );
 
 -- Rating summary derived from MongoDB reviews
-ALTER TABLE products ADD COLUMN avg_rating DECIMAL(3, 2) DEFAULT 0;
-ALTER TABLE products ADD COLUMN review_count INT DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS avg_rating DECIMAL(3, 2) DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS review_count INT DEFAULT 0;
 
 -- 4. Inventory Table
 CREATE TABLE inventory (
@@ -92,7 +92,7 @@ CREATE INDEX idx_categories_name_lower ON categories (LOWER(category_name));
 CREATE INDEX idx_products_category_id ON products (category_id);
 
 -- For faster rating-based sorting
-CREATE INDEX idx_products_avg_rating ON products (avg_rating DESC);
+CREATE INDEX IF NOT EXISTS idx_products_avg_rating ON products (avg_rating DESC);
 
 -- For faster user lookups by email
 CREATE INDEX idx_users_email ON users (email);
@@ -117,4 +117,5 @@ INSERT INTO users (full_name, email, password_hash, role) VALUES
 -- Sample Customer User (password is 'customer123' hashed - placeholder)
 INSERT INTO users (full_name, email, password_hash, role) VALUES 
 ('John Doe', 'john@example.com', 'hashed_password_here', 'CUSTOMER');
+
 
