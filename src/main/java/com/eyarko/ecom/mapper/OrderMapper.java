@@ -5,6 +5,7 @@ import com.eyarko.ecom.dto.OrderResponse;
 import com.eyarko.ecom.entity.Order;
 import com.eyarko.ecom.entity.OrderItem;
 import com.eyarko.ecom.entity.Product;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,7 +17,8 @@ public final class OrderMapper {
         if (order == null) {
             return null;
         }
-        List<OrderItemResponse> items = order.getItems()
+        List<OrderItem> orderItems = order.getItems();
+        List<OrderItemResponse> items = (orderItems == null ? Collections.<OrderItem>emptyList() : orderItems)
             .stream()
             .map(OrderMapper::toItemResponse)
             .collect(Collectors.toList());
@@ -41,4 +43,5 @@ public final class OrderMapper {
             .build();
     }
 }
+
 
