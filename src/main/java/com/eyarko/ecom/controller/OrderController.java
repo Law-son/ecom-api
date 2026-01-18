@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -53,6 +54,14 @@ public class OrderController {
 
     @PatchMapping("/{id}/status")
     public ApiResponse<OrderResponse> updateOrderStatus(
+        @PathVariable Long id,
+        @Valid @RequestBody OrderStatusUpdateRequest request
+    ) {
+        return ResponseUtil.success("Order status updated", orderService.updateOrderStatus(id, request));
+    }
+
+    @PutMapping("/{id}/status")
+    public ApiResponse<OrderResponse> updateOrderStatusPut(
         @PathVariable Long id,
         @Valid @RequestBody OrderStatusUpdateRequest request
     ) {
