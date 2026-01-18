@@ -3,6 +3,7 @@ package com.eyarko.ecom.controller;
 import com.eyarko.ecom.dto.ApiResponse;
 import com.eyarko.ecom.dto.OrderCreateRequest;
 import com.eyarko.ecom.dto.OrderResponse;
+import com.eyarko.ecom.dto.OrderStatusUpdateRequest;
 import com.eyarko.ecom.service.OrderService;
 import com.eyarko.ecom.util.ResponseUtil;
 import jakarta.validation.Valid;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -47,6 +49,14 @@ public class OrderController {
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(parseDirection(sortDir), sortBy));
         return ResponseUtil.success("Orders retrieved", orderService.listOrders(userId, pageable));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ApiResponse<OrderResponse> updateOrderStatus(
+        @PathVariable Long id,
+        @Valid @RequestBody OrderStatusUpdateRequest request
+    ) {
+        return ResponseUtil.success("Order status updated", orderService.updateOrderStatus(id, request));
     }
 
     private Sort.Direction parseDirection(String sortDir) {

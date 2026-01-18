@@ -52,6 +52,8 @@ Base URL (dev): `http://localhost:8080`
 - `GET /api/orders`
   - Query: `userId`, `page`, `size`, `sortBy`, `sortDir`
 - `GET /api/orders/{id}`
+- `PATCH /api/orders/{id}/status`
+  - Body: `status` (PENDING, RECEIVED, SHIPPED, DELIVERED, CANCELLED)
 
 ### Reviews (MongoDB)
 - `POST /api/reviews`

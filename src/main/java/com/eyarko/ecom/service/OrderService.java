@@ -3,6 +3,7 @@ package com.eyarko.ecom.service;
 import com.eyarko.ecom.dto.OrderCreateRequest;
 import com.eyarko.ecom.dto.OrderItemRequest;
 import com.eyarko.ecom.dto.OrderResponse;
+import com.eyarko.ecom.dto.OrderStatusUpdateRequest;
 import com.eyarko.ecom.entity.Inventory;
 import com.eyarko.ecom.entity.Order;
 import com.eyarko.ecom.entity.OrderItem;
@@ -74,6 +75,13 @@ public class OrderService {
             ? orderRepository.findAll(pageable)
             : orderRepository.findByUserId(userId, pageable);
         return page.stream().map(OrderMapper::toResponse).collect(Collectors.toList());
+    }
+
+    public OrderResponse updateOrderStatus(Long id, OrderStatusUpdateRequest request) {
+        Order order = orderRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        order.setStatus(request.getStatus());
+        return OrderMapper.toResponse(orderRepository.save(order));
     }
 
     private OrderItem toOrderItem(Order order, OrderItemRequest request) {
