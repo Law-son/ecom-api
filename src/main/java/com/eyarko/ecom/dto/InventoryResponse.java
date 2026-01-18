@@ -18,3 +18,4 @@ public class InventoryResponse {
     private Instant lastUpdated;
 }
 
+

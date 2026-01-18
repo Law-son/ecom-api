@@ -11,6 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
@@ -36,6 +37,16 @@ public class GlobalExceptionHandler {
             .status("error")
             .message("Validation failed")
             .data(errors)
+            .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBadRequest(HttpMessageNotReadableException ex) {
+        logger.warn("Bad request body: {}", ex.getMessage());
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+            .status("error")
+            .message("Invalid request body")
             .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }

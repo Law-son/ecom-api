@@ -19,8 +19,9 @@ public class ServiceLoggingAspect {
             return joinPoint.proceed();
         } finally {
             long duration = System.currentTimeMillis() - start;
-            logger.info("{} executed in {} ms", joinPoint.getSignature(), duration);
+            logger.debug("{} executed in {} ms", joinPoint.getSignature(), duration);
         }
     }
 }
+
 
