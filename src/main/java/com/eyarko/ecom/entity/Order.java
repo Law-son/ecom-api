@@ -23,6 +23,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "orders")
@@ -45,7 +47,8 @@ public class Order {
     private Instant orderDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false, columnDefinition = "order_status")
     private OrderStatus status;
 
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
@@ -67,4 +70,5 @@ public class Order {
         }
     }
 }
+
 
