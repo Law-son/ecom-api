@@ -66,7 +66,11 @@ public class ProductService {
         } else if (categoryId != null) {
             page = productRepository.findByCategoryId(categoryId, pageable);
         } else if (search != null && !search.isBlank()) {
-            page = productRepository.findByNameContainingIgnoreCase(search, pageable);
+            page = productRepository.findByNameContainingIgnoreCaseOrCategory_NameContainingIgnoreCase(
+                search,
+                search,
+                pageable
+            );
         } else {
             page = productRepository.findAll(pageable);
         }
@@ -80,4 +84,5 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 }
+
 
