@@ -3,11 +3,13 @@ package com.eyarko.ecom.service;
 import com.eyarko.ecom.dto.OrderCreateRequest;
 import com.eyarko.ecom.dto.OrderItemRequest;
 import com.eyarko.ecom.dto.OrderResponse;
+import com.eyarko.ecom.entity.Inventory;
 import com.eyarko.ecom.entity.Order;
 import com.eyarko.ecom.entity.OrderItem;
 import com.eyarko.ecom.entity.Product;
 import com.eyarko.ecom.entity.User;
 import com.eyarko.ecom.mapper.OrderMapper;
+import com.eyarko.ecom.repository.InventoryRepository;
 import com.eyarko.ecom.repository.OrderRepository;
 import com.eyarko.ecom.repository.ProductRepository;
 import com.eyarko.ecom.repository.UserRepository;
@@ -18,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -25,17 +28,21 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final InventoryRepository inventoryRepository;
 
     public OrderService(
         OrderRepository orderRepository,
         UserRepository userRepository,
-        ProductRepository productRepository
+        ProductRepository productRepository,
+        InventoryRepository inventoryRepository
     ) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
+        this.inventoryRepository = inventoryRepository;
     }
 
+    @Transactional
     public OrderResponse createOrder(OrderCreateRequest request) {
         User user = userRepository.findById(request.getUserId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
@@ -50,6 +57,8 @@ public class OrderService {
 
         order.setItems(items);
         order.setTotalAmount(calculateTotal(items));
+
+        items.forEach(this::reserveInventory);
 
         return OrderMapper.toResponse(orderRepository.save(order));
     }
@@ -78,10 +87,22 @@ public class OrderService {
             .build();
     }
 
+    private void reserveInventory(OrderItem item) {
+        Inventory inventory = inventoryRepository.findByProductId(item.getProduct().getId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Inventory not found"));
+        int remaining = inventory.getQuantity() - item.getQuantity();
+        if (remaining < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient stock");
+        }
+        inventory.setQuantity(remaining);
+        inventoryRepository.save(inventory);
+    }
+
     private BigDecimal calculateTotal(List<OrderItem> items) {
         return items.stream()
             .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
+
 

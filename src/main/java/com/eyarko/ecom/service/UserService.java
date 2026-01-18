@@ -9,15 +9,18 @@ import com.eyarko.ecom.repository.UserRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class UserService {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public UserResponse createUser(UserCreateRequest request) {
@@ -27,7 +30,7 @@ public class UserService {
         User user = User.builder()
             .fullName(request.getFullName())
             .email(request.getEmail())
-            .passwordHash(request.getPassword())
+            .passwordHash(passwordEncoder.encode(request.getPassword()))
             .role(request.getRole())
             .build();
         return UserMapper.toResponse(userRepository.save(user));
@@ -59,7 +62,7 @@ public class UserService {
             user.setFullName(request.getFullName());
         }
         if (request.getPassword() != null) {
-            user.setPasswordHash(request.getPassword());
+            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         }
         if (request.getRole() != null) {
             user.setRole(request.getRole());

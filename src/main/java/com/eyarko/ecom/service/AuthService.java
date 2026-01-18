@@ -1,0 +1,43 @@
+package com.eyarko.ecom.service;
+
+import com.eyarko.ecom.dto.AuthResponse;
+import com.eyarko.ecom.dto.LoginRequest;
+import com.eyarko.ecom.entity.User;
+import com.eyarko.ecom.repository.UserRepository;
+import java.time.Instant;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+@Service
+public class AuthService {
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    public AuthResponse login(LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+        }
+
+        user.setLastLogin(Instant.now());
+        userRepository.save(user);
+
+        return AuthResponse.builder()
+            .id(user.getId())
+            .fullName(user.getFullName())
+            .email(user.getEmail())
+            .role(user.getRole())
+            .lastLogin(user.getLastLogin())
+            .build();
+    }
+}
+
