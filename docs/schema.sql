@@ -15,7 +15,7 @@ DROP TYPE IF EXISTS user_role;
 
 -- Create Enums
 CREATE TYPE user_role AS ENUM ('CUSTOMER', 'ADMIN');
-CREATE TYPE order_status AS ENUM ('PENDING', 'SHIPPED', 'DELIVERED', 'CANCELLED');
+CREATE TYPE order_status AS ENUM ('PENDING', 'RECEIVED', 'SHIPPED', 'DELIVERED', 'CANCELLED');
 
 -- Create Tables
 
@@ -70,6 +70,9 @@ CREATE TABLE orders (
     status order_status NOT NULL DEFAULT 'PENDING',
     total_amount DECIMAL(12, 2) NOT NULL CHECK (total_amount >= 0)
 );
+
+-- Ensure enum includes RECEIVED status (legacy databases)
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'RECEIVED';
 
 -- 6. Order Items Table
 CREATE TABLE order_items (
