@@ -32,9 +32,16 @@ public class InventoryService {
     }
 
     public InventoryResponse getInventoryByProduct(Long productId) {
-        Inventory inventory = inventoryRepository.findByProductId(productId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory not found"));
-        return InventoryMapper.toResponse(inventory);
+        if (!productRepository.existsById(productId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
+        }
+        return inventoryRepository.findByProductId(productId)
+            .map(InventoryMapper::toResponse)
+            .orElseGet(() -> InventoryResponse.builder()
+                .productId(productId)
+                .quantity(0)
+                .lastUpdated(null)
+                .build());
     }
 }
 
