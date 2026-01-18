@@ -9,6 +9,8 @@ import com.eyarko.ecom.repository.CategoryRepository;
 import com.eyarko.ecom.repository.ProductRepository;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -38,6 +40,7 @@ public class ProductService {
         return ProductMapper.toResponse(productRepository.save(product));
     }
 
+    @CacheEvict(value = "products", allEntries = true)
     public ProductResponse updateProduct(Long id, ProductRequest request) {
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
@@ -53,12 +56,18 @@ public class ProductService {
         return ProductMapper.toResponse(productRepository.save(product));
     }
 
+    @Cacheable(value = "products", key = "'product:' + #id")
     public ProductResponse getProduct(Long id) {
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
         return ProductMapper.toResponse(product);
     }
 
+    @Cacheable(
+        value = "products",
+        key = "'list:' + #categoryId + ':' + #search + ':' + #pageable.pageNumber + ':' + #pageable.pageSize "
+            + "+ ':' + #pageable.sort.toString()"
+    )
     public List<ProductResponse> listProducts(Long categoryId, String search, Pageable pageable) {
         Page<Product> page;
         if (categoryId != null && search != null && !search.isBlank()) {
@@ -77,6 +86,7 @@ public class ProductService {
         return page.stream().map(ProductMapper::toResponse).collect(Collectors.toList());
     }
 
+    @CacheEvict(value = "products", allEntries = true)
     public void deleteProduct(Long id) {
         if (!productRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
