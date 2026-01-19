@@ -32,6 +32,8 @@ Base URL (dev): `http://localhost:8080`
 ### Products
 - `POST /api/products`
   - Body: `categoryId`, `name`, `description`, `price`, `imageUrl`
+- `GET /api/products/all`
+  - Returns all products without pagination
 - `GET /api/products`
   - Query: `categoryId`, `search`, `page`, `size`, `sortBy`, `sortDir`
 - `GET /api/products/{id}`

@@ -1,6 +1,7 @@
 package com.eyarko.ecom.repository;
 
 import com.eyarko.ecom.entity.Product;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +12,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Override
     @EntityGraph(attributePaths = "category")
     Optional<Product> findById(Long id);
+
+    @Override
+    @EntityGraph(attributePaths = "category")
+    List<Product> findAll();
 
     @Override
     @EntityGraph(attributePaths = "category")

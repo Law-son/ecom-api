@@ -47,6 +47,11 @@ public class ProductController {
         return ResponseUtil.success("Product retrieved", productService.getProduct(id));
     }
 
+    @GetMapping("/all")
+    public ApiResponse<List<ProductResponse>> listAllProducts() {
+        return ResponseUtil.success("Products retrieved", productService.listAllProducts());
+    }
+
     @GetMapping
     public ApiResponse<List<ProductResponse>> listProducts(
         @RequestParam(required = false) Long categoryId,

@@ -27,6 +27,7 @@ public class ProductService {
         this.categoryRepository = categoryRepository;
     }
 
+    @CacheEvict(value = "products", allEntries = true)
     public ProductResponse createProduct(ProductRequest request) {
         Category category = categoryRepository.findById(request.getCategoryId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
@@ -61,6 +62,14 @@ public class ProductService {
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
         return ProductMapper.toResponse(product);
+    }
+
+    @Cacheable(value = "products", key = "'all'")
+    public List<ProductResponse> listAllProducts() {
+        return productRepository.findAll()
+            .stream()
+            .map(ProductMapper::toResponse)
+            .collect(Collectors.toList());
     }
 
     @Cacheable(
