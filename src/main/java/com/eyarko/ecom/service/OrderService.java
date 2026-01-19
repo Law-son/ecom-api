@@ -80,6 +80,7 @@ public class OrderService {
         return page.stream().map(OrderMapper::toResponse).collect(Collectors.toList());
     }
 
+    @Transactional
     public OrderResponse updateOrderStatus(Long id, OrderStatusUpdateRequest request) {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
