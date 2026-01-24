@@ -24,6 +24,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * Order business logic.
+ */
 @Service
 public class OrderService {
     private final OrderRepository orderRepository;
@@ -43,6 +46,12 @@ public class OrderService {
         this.inventoryRepository = inventoryRepository;
     }
 
+    /**
+     * Creates an order and reserves inventory.
+     *
+     * @param request order payload
+     * @return created order
+     */
     @Transactional
     public OrderResponse createOrder(OrderCreateRequest request) {
         if (request.getItems() == null || request.getItems().isEmpty()) {
@@ -67,12 +76,25 @@ public class OrderService {
         return OrderMapper.toResponse(orderRepository.save(order));
     }
 
+    /**
+     * Retrieves an order by id.
+     *
+     * @param id order id
+     * @return order details
+     */
     public OrderResponse getOrder(Long id) {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
         return OrderMapper.toResponse(order);
     }
 
+    /**
+     * Lists orders with optional user filtering.
+     *
+     * @param userId optional user id
+     * @param pageable paging and sorting options
+     * @return list of orders
+     */
     public List<OrderResponse> listOrders(Long userId, Pageable pageable) {
         Page<Order> page = (userId == null)
             ? orderRepository.findAll(pageable)
@@ -80,6 +102,13 @@ public class OrderService {
         return page.stream().map(OrderMapper::toResponse).collect(Collectors.toList());
     }
 
+    /**
+     * Updates the status of an order.
+     *
+     * @param id order id
+     * @param request status update payload
+     * @return updated order
+     */
     @Transactional
     public OrderResponse updateOrderStatus(Long id, OrderStatusUpdateRequest request) {
         Order order = orderRepository.findById(id)

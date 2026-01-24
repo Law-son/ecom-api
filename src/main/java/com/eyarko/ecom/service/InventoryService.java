@@ -11,6 +11,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * Inventory business logic.
+ */
 @Service
 public class InventoryService {
     private final InventoryRepository inventoryRepository;
@@ -21,6 +24,12 @@ public class InventoryService {
         this.productRepository = productRepository;
     }
 
+    /**
+     * Adjusts inventory quantity for a product.
+     *
+     * @param request inventory adjustment payload
+     * @return updated inventory
+     */
     public InventoryResponse adjustInventory(InventoryAdjustRequest request) {
         Product product = productRepository.findById(request.getProductId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
@@ -31,6 +40,12 @@ public class InventoryService {
         return InventoryMapper.toResponse(inventoryRepository.save(inventory));
     }
 
+    /**
+     * Retrieves inventory for a product, returning zero quantity if missing.
+     *
+     * @param productId product id
+     * @return inventory details
+     */
     public InventoryResponse getInventoryByProduct(Long productId) {
         if (!productRepository.existsById(productId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");

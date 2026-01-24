@@ -21,6 +21,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Order management endpoints.
+ */
 @RestController
 @RequestMapping("/api/orders")
 public class OrderController {
@@ -30,16 +33,38 @@ public class OrderController {
         this.orderService = orderService;
     }
 
+    /**
+     * Creates a new order.
+     *
+     * @param request order payload
+     * @return created order
+     */
     @PostMapping
     public ApiResponse<OrderResponse> createOrder(@Valid @RequestBody OrderCreateRequest request) {
         return ResponseUtil.success("Order created", orderService.createOrder(request));
     }
 
+    /**
+     * Retrieves an order by id.
+     *
+     * @param id order id
+     * @return order details
+     */
     @GetMapping("/{id}")
     public ApiResponse<OrderResponse> getOrder(@PathVariable Long id) {
         return ResponseUtil.success("Order retrieved", orderService.getOrder(id));
     }
 
+    /**
+     * Lists orders, optionally filtered by user id.
+     *
+     * @param userId optional user id
+     * @param page page index
+     * @param size page size
+     * @param sortBy field to sort by
+     * @param sortDir sort direction
+     * @return list of orders
+     */
     @GetMapping
     public ApiResponse<List<OrderResponse>> listOrders(
         @RequestParam(required = false) Long userId,
@@ -52,6 +77,13 @@ public class OrderController {
         return ResponseUtil.success("Orders retrieved", orderService.listOrders(userId, pageable));
     }
 
+    /**
+     * Updates the status of an order using PATCH.
+     *
+     * @param id order id
+     * @param request status update payload
+     * @return updated order
+     */
     @PatchMapping("/{id}/status")
     public ApiResponse<OrderResponse> updateOrderStatus(
         @PathVariable Long id,
@@ -60,6 +92,13 @@ public class OrderController {
         return ResponseUtil.success("Order status updated", orderService.updateOrderStatus(id, request));
     }
 
+    /**
+     * Updates the status of an order using PUT.
+     *
+     * @param id order id
+     * @param request status update payload
+     * @return updated order
+     */
     @PutMapping("/{id}/status")
     public ApiResponse<OrderResponse> updateOrderStatusPut(
         @PathVariable Long id,

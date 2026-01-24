@@ -10,6 +10,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * Handles authentication workflows.
+ */
 @Service
 public class AuthService {
     private final UserRepository userRepository;
@@ -20,6 +23,12 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * Authenticates a user by email and password.
+     *
+     * @param request login payload
+     * @return authentication response
+     */
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));

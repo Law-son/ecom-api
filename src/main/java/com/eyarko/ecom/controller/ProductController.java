@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Product management endpoints.
+ */
 @RestController
 @RequestMapping("/api/products")
 public class ProductController {
@@ -29,11 +32,24 @@ public class ProductController {
         this.productService = productService;
     }
 
+    /**
+     * Creates a new product.
+     *
+     * @param request product payload
+     * @return created product
+     */
     @PostMapping
     public ApiResponse<ProductResponse> createProduct(@Valid @RequestBody ProductRequest request) {
         return ResponseUtil.success("Product created", productService.createProduct(request));
     }
 
+    /**
+     * Updates an existing product.
+     *
+     * @param id product id
+     * @param request product payload
+     * @return updated product
+     */
     @PutMapping("/{id}")
     public ApiResponse<ProductResponse> updateProduct(
         @PathVariable Long id,
@@ -42,16 +58,38 @@ public class ProductController {
         return ResponseUtil.success("Product updated", productService.updateProduct(id, request));
     }
 
+    /**
+     * Retrieves a product by id.
+     *
+     * @param id product id
+     * @return product details
+     */
     @GetMapping("/{id}")
     public ApiResponse<ProductResponse> getProduct(@PathVariable Long id) {
         return ResponseUtil.success("Product retrieved", productService.getProduct(id));
     }
 
+    /**
+     * Lists all products without pagination.
+     *
+     * @return list of all products
+     */
     @GetMapping("/all")
     public ApiResponse<List<ProductResponse>> listAllProducts() {
         return ResponseUtil.success("Products retrieved", productService.listAllProducts());
     }
 
+    /**
+     * Lists products with optional filtering, sorting, and pagination.
+     *
+     * @param categoryId optional category id filter
+     * @param search optional search query
+     * @param page page index
+     * @param size page size
+     * @param sortBy field to sort by
+     * @param sortDir sort direction
+     * @return list of products
+     */
     @GetMapping
     public ApiResponse<List<ProductResponse>> listProducts(
         @RequestParam(required = false) Long categoryId,
@@ -68,6 +106,12 @@ public class ProductController {
         );
     }
 
+    /**
+     * Deletes a product by id.
+     *
+     * @param id product id
+     * @return success response
+     */
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);

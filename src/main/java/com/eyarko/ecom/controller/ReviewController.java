@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Review endpoints for products.
+ */
 @RestController
 @RequestMapping("/api/reviews")
 public class ReviewController {
@@ -23,11 +26,24 @@ public class ReviewController {
         this.reviewService = reviewService;
     }
 
+    /**
+     * Creates a new review.
+     *
+     * @param request review payload
+     * @return created review
+     */
     @PostMapping
     public ApiResponse<ReviewResponse> createReview(@Valid @RequestBody ReviewCreateRequest request) {
         return ResponseUtil.success("Review created", reviewService.createReview(request));
     }
 
+    /**
+     * Lists reviews, optionally filtered by product or user.
+     *
+     * @param productId optional product id
+     * @param userId optional user id
+     * @return list of reviews
+     */
     @GetMapping
     public ApiResponse<List<ReviewResponse>> listReviews(
         @RequestParam(required = false) Long productId,

@@ -17,6 +17,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * Product business logic.
+ */
 @Service
 public class ProductService {
     private final ProductRepository productRepository;
@@ -27,6 +30,12 @@ public class ProductService {
         this.categoryRepository = categoryRepository;
     }
 
+    /**
+     * Creates a new product.
+     *
+     * @param request product payload
+     * @return created product
+     */
     @CacheEvict(value = "products", allEntries = true)
     public ProductResponse createProduct(ProductRequest request) {
         Category category = categoryRepository.findById(request.getCategoryId())
@@ -41,6 +50,13 @@ public class ProductService {
         return ProductMapper.toResponse(productRepository.save(product));
     }
 
+    /**
+     * Updates an existing product.
+     *
+     * @param id product id
+     * @param request product payload
+     * @return updated product
+     */
     @CacheEvict(value = "products", allEntries = true)
     public ProductResponse updateProduct(Long id, ProductRequest request) {
         Product product = productRepository.findById(id)
@@ -57,6 +73,12 @@ public class ProductService {
         return ProductMapper.toResponse(productRepository.save(product));
     }
 
+    /**
+     * Retrieves a product by id.
+     *
+     * @param id product id
+     * @return product details
+     */
     @Cacheable(value = "products", key = "'product:' + #id")
     public ProductResponse getProduct(Long id) {
         Product product = productRepository.findById(id)
@@ -64,6 +86,11 @@ public class ProductService {
         return ProductMapper.toResponse(product);
     }
 
+    /**
+     * Lists all products without pagination.
+     *
+     * @return list of products
+     */
     @Cacheable(value = "products", key = "'all'")
     public List<ProductResponse> listAllProducts() {
         return productRepository.findAll()
@@ -72,6 +99,14 @@ public class ProductService {
             .collect(Collectors.toList());
     }
 
+    /**
+     * Lists products with optional filtering and pagination.
+     *
+     * @param categoryId optional category filter
+     * @param search optional search query
+     * @param pageable paging and sorting options
+     * @return list of products
+     */
     @Cacheable(
         value = "products",
         key = "'list:' + #categoryId + ':' + #search + ':' + #pageable.pageNumber + ':' + #pageable.pageSize "
@@ -95,6 +130,11 @@ public class ProductService {
         return page.stream().map(ProductMapper::toResponse).collect(Collectors.toList());
     }
 
+    /**
+     * Deletes a product by id.
+     *
+     * @param id product id
+     */
     @CacheEvict(value = "products", allEntries = true)
     public void deleteProduct(Long id) {
         if (!productRepository.existsById(id)) {

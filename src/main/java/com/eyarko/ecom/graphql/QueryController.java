@@ -18,6 +18,9 @@ import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.stereotype.Controller;
 
+/**
+ * GraphQL queries for core resources.
+ */
 @Controller
 public class QueryController {
     private final ProductService productService;
@@ -40,11 +43,28 @@ public class QueryController {
         this.reviewService = reviewService;
     }
 
+    /**
+     * Retrieves a product by id via GraphQL.
+     *
+     * @param id product id
+     * @return product details
+     */
     @QueryMapping
     public ProductResponse productById(@Argument Long id) {
         return productService.getProduct(id);
     }
 
+    /**
+     * Lists products via GraphQL with optional filters.
+     *
+     * @param categoryId optional category filter
+     * @param search optional search query
+     * @param page page index
+     * @param size page size
+     * @param sortBy field to sort by
+     * @param sortDir sort direction
+     * @return list of products
+     */
     @QueryMapping
     public List<ProductResponse> products(
         @Argument Long categoryId,
@@ -61,16 +81,34 @@ public class QueryController {
         return productService.listProducts(categoryId, search, pageable);
     }
 
+    /**
+     * Lists all categories via GraphQL.
+     *
+     * @return list of categories
+     */
     @QueryMapping
     public List<CategoryResponse> categories() {
         return categoryService.listCategories();
     }
 
+    /**
+     * Lists all users via GraphQL.
+     *
+     * @return list of users
+     */
     @QueryMapping
     public List<UserResponse> users() {
         return userService.listUsers();
     }
 
+    /**
+     * Lists orders for a user via GraphQL.
+     *
+     * @param userId user id
+     * @param page page index
+     * @param size page size
+     * @return list of orders
+     */
     @QueryMapping
     public List<OrderResponse> ordersByUser(@Argument Long userId, @Argument Integer page, @Argument Integer size) {
         int resolvedPage = page == null ? 0 : page;
@@ -79,6 +117,12 @@ public class QueryController {
         return orderService.listOrders(userId, pageable);
     }
 
+    /**
+     * Lists reviews for a product via GraphQL.
+     *
+     * @param productId product id
+     * @return list of reviews
+     */
     @QueryMapping
     public List<ReviewResponse> reviewsByProduct(@Argument Long productId) {
         return reviewService.listReviews(productId, null);

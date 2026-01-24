@@ -17,6 +17,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * Review business logic.
+ */
 @Service
 public class ReviewService {
     private final ReviewRepository reviewRepository;
@@ -33,6 +36,12 @@ public class ReviewService {
         this.productRepository = productRepository;
     }
 
+    /**
+     * Creates a review and updates product rating stats.
+     *
+     * @param request review payload
+     * @return created review
+     */
     public ReviewResponse createReview(ReviewCreateRequest request) {
         if (!userRepository.existsById(request.getUserId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
@@ -54,6 +63,13 @@ public class ReviewService {
         return ReviewMapper.toResponse(saved);
     }
 
+    /**
+     * Lists reviews by product or user.
+     *
+     * @param productId optional product id
+     * @param userId optional user id
+     * @return list of reviews
+     */
     public List<ReviewResponse> listReviews(Long productId, Long userId) {
         List<Review> reviews;
         if (productId != null) {
