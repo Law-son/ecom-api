@@ -5,13 +5,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.eyarko.ecom.entity.Category;
 import com.eyarko.ecom.entity.Product;
 import java.math.BigDecimal;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 
-@DataJpaTest
+@JdbcTest
+@Import({ProductRepository.class, CategoryRepository.class})
+@ActiveProfiles("test")
 class ProductRepositoryTest {
     @Autowired
     private ProductRepository productRepository;
@@ -30,13 +34,13 @@ class ProductRepositoryTest {
                 .build()
         );
 
-        Page<Product> results = productRepository.findByNameContainingIgnoreCase(
+        List<Product> results = productRepository.findByNameContainingIgnoreCase(
             "laptop",
             PageRequest.of(0, 10)
         );
 
-        assertThat(results.getTotalElements()).isEqualTo(1);
-        assertThat(results.getContent().get(0).getName()).isEqualTo("Laptop Pro");
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).getName()).isEqualTo("Laptop Pro");
     }
 }
 

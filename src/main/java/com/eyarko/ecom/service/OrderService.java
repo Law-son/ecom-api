@@ -17,7 +17,6 @@ import com.eyarko.ecom.repository.UserRepository;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -96,10 +95,10 @@ public class OrderService {
      * @return list of orders
      */
     public List<OrderResponse> listOrders(Long userId, Pageable pageable) {
-        Page<Order> page = (userId == null)
+        List<Order> orders = (userId == null)
             ? orderRepository.findAll(pageable)
             : orderRepository.findByUserId(userId, pageable);
-        return page.stream().map(OrderMapper::toResponse).collect(Collectors.toList());
+        return orders.stream().map(OrderMapper::toResponse).collect(Collectors.toList());
     }
 
     /**

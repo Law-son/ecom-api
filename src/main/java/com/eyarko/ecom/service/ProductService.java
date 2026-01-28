@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -113,21 +112,21 @@ public class ProductService {
             + "+ ':' + #pageable.sort.toString()"
     )
     public List<ProductResponse> listProducts(Long categoryId, String search, Pageable pageable) {
-        Page<Product> page;
+        List<Product> products;
         if (categoryId != null && search != null && !search.isBlank()) {
-            page = productRepository.findByCategoryIdAndNameContainingIgnoreCase(categoryId, search, pageable);
+            products = productRepository.findByCategoryIdAndNameContainingIgnoreCase(categoryId, search, pageable);
         } else if (categoryId != null) {
-            page = productRepository.findByCategoryId(categoryId, pageable);
+            products = productRepository.findByCategoryId(categoryId, pageable);
         } else if (search != null && !search.isBlank()) {
-            page = productRepository.findByNameContainingIgnoreCaseOrCategory_NameContainingIgnoreCase(
+            products = productRepository.findByNameContainingIgnoreCaseOrCategory_NameContainingIgnoreCase(
                 search,
                 search,
                 pageable
             );
         } else {
-            page = productRepository.findAll(pageable);
+            products = productRepository.findAll(pageable);
         }
-        return page.stream().map(ProductMapper::toResponse).collect(Collectors.toList());
+        return products.stream().map(ProductMapper::toResponse).collect(Collectors.toList());
     }
 
     /**

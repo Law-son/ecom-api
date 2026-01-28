@@ -49,7 +49,6 @@ class OrderServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(productRepository.findById(10L)).thenReturn(Optional.of(product));
         when(inventoryRepository.findByProductId(10L)).thenReturn(Optional.of(inventory));
-        when(orderRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         OrderCreateRequest request = OrderCreateRequest.builder()
             .userId(1L)

@@ -39,7 +39,6 @@ class UserServiceTest {
             .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(passwordEncoder.encode(any())).thenReturn("hashed");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         UserUpdateRequest request = UserUpdateRequest.builder()
