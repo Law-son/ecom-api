@@ -52,32 +52,9 @@ public class InventoryRepository {
      */
     public Inventory save(Inventory inventory) {
         if (inventory.getId() == null) {
-            KeyHolder keyHolder = new GeneratedKeyHolder();
-            jdbcTemplate.update(connection -> {
-                PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO inventory (product_id, quantity, last_updated) VALUES (?, ?, NOW())",
-                    Statement.RETURN_GENERATED_KEYS
-                );
-                ps.setLong(1, inventory.getProduct().getId());
-                ps.setInt(2, inventory.getQuantity());
-                return ps;
-            }, keyHolder);
-            Long key = extractKey(keyHolder, "inventory_id");
-            if (key == null) {
-                return inventory;
-            }
-            Inventory saved = findByProductId(inventory.getProduct().getId()).orElse(inventory);
-            if (saved.getId() == null) {
-                saved.setId(key);
-            }
-            return saved;
+            return insertInventory(inventory);
         }
-        jdbcTemplate.update(
-            "UPDATE inventory SET quantity = ?, last_updated = NOW() WHERE inventory_id = ?",
-            inventory.getQuantity(),
-            inventory.getId()
-        );
-        return findByProductId(inventory.getProduct().getId()).orElse(inventory);
+        return updateInventory(inventory);
     }
 
     private static java.time.Instant toInstant(Timestamp timestamp) {
@@ -107,6 +84,37 @@ public class InventoryRepository {
         }
         Number key = keyHolder.getKey();
         return key == null ? null : key.longValue();
+    }
+
+    private Inventory insertInventory(Inventory inventory) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(
+                "INSERT INTO inventory (product_id, quantity, last_updated) VALUES (?, ?, NOW())",
+                Statement.RETURN_GENERATED_KEYS
+            );
+            ps.setLong(1, inventory.getProduct().getId());
+            ps.setInt(2, inventory.getQuantity());
+            return ps;
+        }, keyHolder);
+        Long key = extractKey(keyHolder, "inventory_id");
+        if (key == null) {
+            return inventory;
+        }
+        Inventory saved = findByProductId(inventory.getProduct().getId()).orElse(inventory);
+        if (saved.getId() == null) {
+            saved.setId(key);
+        }
+        return saved;
+    }
+
+    private Inventory updateInventory(Inventory inventory) {
+        jdbcTemplate.update(
+            "UPDATE inventory SET quantity = ?, last_updated = NOW() WHERE inventory_id = ?",
+            inventory.getQuantity(),
+            inventory.getId()
+        );
+        return findByProductId(inventory.getProduct().getId()).orElse(inventory);
     }
 }
 

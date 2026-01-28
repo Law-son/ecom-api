@@ -111,55 +111,9 @@ public class OrderRepository {
      */
     public Order save(Order order) {
         if (order.getId() == null) {
-            KeyHolder keyHolder = new GeneratedKeyHolder();
-            jdbcTemplate.update(connection -> {
-                boolean postgres = isPostgres(connection);
-                String sql;
-                if (order.getOrderDate() == null) {
-                    sql = postgres
-                        ? "INSERT INTO orders (user_id, status, total_amount) "
-                            + "VALUES (?, CAST(? AS order_status), ?)"
-                        : "INSERT INTO orders (user_id, status, total_amount) VALUES (?, ?, ?)";
-                } else {
-                    sql = postgres
-                        ? "INSERT INTO orders (user_id, order_date, status, total_amount) "
-                            + "VALUES (?, ?, CAST(? AS order_status), ?)"
-                        : "INSERT INTO orders (user_id, order_date, status, total_amount) VALUES (?, ?, ?, ?)";
-                }
-                PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-                ps.setLong(1, order.getUser().getId());
-                if (order.getOrderDate() == null) {
-                    ps.setString(2, (order.getStatus() == null ? OrderStatus.PENDING : order.getStatus()).name());
-                    ps.setBigDecimal(3, order.getTotalAmount());
-                } else {
-                    ps.setTimestamp(2, toTimestamp(order.getOrderDate()));
-                    ps.setString(3, (order.getStatus() == null ? OrderStatus.PENDING : order.getStatus()).name());
-                    ps.setBigDecimal(4, order.getTotalAmount());
-                }
-                return ps;
-            }, keyHolder);
-            Long key = extractKey(keyHolder, "order_id");
-            if (key == null) {
-                return order;
-            }
-            order.setId(key);
-            insertItems(order);
-            return findById(order.getId()).orElse(order);
+            return insertOrder(order);
         }
-        jdbcTemplate.update(connection -> {
-            boolean postgres = isPostgres(connection);
-            String sql = postgres
-                ? "UPDATE orders SET user_id = ?, status = CAST(? AS order_status), total_amount = ? "
-                    + "WHERE order_id = ?"
-                : "UPDATE orders SET user_id = ?, status = ?, total_amount = ? WHERE order_id = ?";
-            PreparedStatement ps = connection.prepareStatement(sql);
-            ps.setLong(1, order.getUser().getId());
-            ps.setString(2, order.getStatus().name());
-            ps.setBigDecimal(3, order.getTotalAmount());
-            ps.setLong(4, order.getId());
-            return ps;
-        });
-        return findById(order.getId()).orElse(order);
+        return updateOrder(order);
     }
 
     private void insertItems(Order order) {
@@ -286,6 +240,60 @@ public class OrderRepository {
         } catch (Exception ex) {
             return false;
         }
+    }
+
+    private Order insertOrder(Order order) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            boolean postgres = isPostgres(connection);
+            String sql;
+            if (order.getOrderDate() == null) {
+                sql = postgres
+                    ? "INSERT INTO orders (user_id, status, total_amount) "
+                        + "VALUES (?, CAST(? AS order_status), ?)"
+                    : "INSERT INTO orders (user_id, status, total_amount) VALUES (?, ?, ?)";
+            } else {
+                sql = postgres
+                    ? "INSERT INTO orders (user_id, order_date, status, total_amount) "
+                        + "VALUES (?, ?, CAST(? AS order_status), ?)"
+                    : "INSERT INTO orders (user_id, order_date, status, total_amount) VALUES (?, ?, ?, ?)";
+            }
+            PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            ps.setLong(1, order.getUser().getId());
+            if (order.getOrderDate() == null) {
+                ps.setString(2, (order.getStatus() == null ? OrderStatus.PENDING : order.getStatus()).name());
+                ps.setBigDecimal(3, order.getTotalAmount());
+            } else {
+                ps.setTimestamp(2, toTimestamp(order.getOrderDate()));
+                ps.setString(3, (order.getStatus() == null ? OrderStatus.PENDING : order.getStatus()).name());
+                ps.setBigDecimal(4, order.getTotalAmount());
+            }
+            return ps;
+        }, keyHolder);
+        Long key = extractKey(keyHolder, "order_id");
+        if (key == null) {
+            return order;
+        }
+        order.setId(key);
+        insertItems(order);
+        return findById(order.getId()).orElse(order);
+    }
+
+    private Order updateOrder(Order order) {
+        jdbcTemplate.update(connection -> {
+            boolean postgres = isPostgres(connection);
+            String sql = postgres
+                ? "UPDATE orders SET user_id = ?, status = CAST(? AS order_status), total_amount = ? "
+                    + "WHERE order_id = ?"
+                : "UPDATE orders SET user_id = ?, status = ?, total_amount = ? WHERE order_id = ?";
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setLong(1, order.getUser().getId());
+            ps.setString(2, order.getStatus().name());
+            ps.setBigDecimal(3, order.getTotalAmount());
+            ps.setLong(4, order.getId());
+            return ps;
+        });
+        return findById(order.getId()).orElse(order);
     }
 }
 

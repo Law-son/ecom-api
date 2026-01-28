@@ -179,45 +179,10 @@ public class ProductRepository {
      * @return saved product
      */
     public Product save(Product product) {
-        Long categoryId = product.getCategory() != null ? product.getCategory().getId() : null;
-        BigDecimal avgRating = product.getAvgRating() == null ? BigDecimal.ZERO : product.getAvgRating();
-        Integer reviewCount = product.getReviewCount() == null ? 0 : product.getReviewCount();
         if (product.getId() == null) {
-            KeyHolder keyHolder = new GeneratedKeyHolder();
-            jdbcTemplate.update(connection -> {
-                PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO products (category_id, name, description, price, image_url, avg_rating, review_count) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    Statement.RETURN_GENERATED_KEYS
-                );
-                ps.setLong(1, categoryId);
-                ps.setString(2, product.getName());
-                ps.setString(3, product.getDescription());
-                ps.setBigDecimal(4, product.getPrice());
-                ps.setString(5, product.getImageUrl());
-                ps.setBigDecimal(6, avgRating);
-                ps.setInt(7, reviewCount);
-                return ps;
-            }, keyHolder);
-            Long key = extractKey(keyHolder, "product_id");
-            if (key == null) {
-                return product;
-            }
-            return findById(key).orElse(product);
+            return insertProduct(product);
         }
-        jdbcTemplate.update(
-            "UPDATE products SET category_id = ?, name = ?, description = ?, price = ?, image_url = ?, "
-                + "avg_rating = ?, review_count = ? WHERE product_id = ?",
-            categoryId,
-            product.getName(),
-            product.getDescription(),
-            product.getPrice(),
-            product.getImageUrl(),
-            avgRating,
-            reviewCount,
-            product.getId()
-        );
-        return findById(product.getId()).orElse(product);
+        return updateProduct(product);
     }
 
     /**
@@ -291,6 +256,52 @@ public class ProductRepository {
         }
         Number key = keyHolder.getKey();
         return key == null ? null : key.longValue();
+    }
+
+    private Product insertProduct(Product product) {
+        Long categoryId = product.getCategory() != null ? product.getCategory().getId() : null;
+        BigDecimal avgRating = product.getAvgRating() == null ? BigDecimal.ZERO : product.getAvgRating();
+        Integer reviewCount = product.getReviewCount() == null ? 0 : product.getReviewCount();
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(
+                "INSERT INTO products (category_id, name, description, price, image_url, avg_rating, review_count) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                Statement.RETURN_GENERATED_KEYS
+            );
+            ps.setLong(1, categoryId);
+            ps.setString(2, product.getName());
+            ps.setString(3, product.getDescription());
+            ps.setBigDecimal(4, product.getPrice());
+            ps.setString(5, product.getImageUrl());
+            ps.setBigDecimal(6, avgRating);
+            ps.setInt(7, reviewCount);
+            return ps;
+        }, keyHolder);
+        Long key = extractKey(keyHolder, "product_id");
+        if (key == null) {
+            return product;
+        }
+        return findById(key).orElse(product);
+    }
+
+    private Product updateProduct(Product product) {
+        Long categoryId = product.getCategory() != null ? product.getCategory().getId() : null;
+        BigDecimal avgRating = product.getAvgRating() == null ? BigDecimal.ZERO : product.getAvgRating();
+        Integer reviewCount = product.getReviewCount() == null ? 0 : product.getReviewCount();
+        jdbcTemplate.update(
+            "UPDATE products SET category_id = ?, name = ?, description = ?, price = ?, image_url = ?, "
+                + "avg_rating = ?, review_count = ? WHERE product_id = ?",
+            categoryId,
+            product.getName(),
+            product.getDescription(),
+            product.getPrice(),
+            product.getImageUrl(),
+            avgRating,
+            reviewCount,
+            product.getId()
+        );
+        return findById(product.getId()).orElse(product);
     }
 }
 

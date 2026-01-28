@@ -86,45 +86,9 @@ public class UserRepository {
     public User save(User user) {
         UserRole role = user.getRole() == null ? UserRole.CUSTOMER : user.getRole();
         if (user.getId() == null) {
-            KeyHolder keyHolder = new GeneratedKeyHolder();
-            jdbcTemplate.update(connection -> {
-                boolean postgres = isPostgres(connection);
-                String sql = postgres
-                    ? "INSERT INTO users (full_name, email, password_hash, role, last_login) "
-                        + "VALUES (?, ?, ?, CAST(? AS user_role), ?)"
-                    : "INSERT INTO users (full_name, email, password_hash, role, last_login) "
-                        + "VALUES (?, ?, ?, ?, ?)";
-                PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-                ps.setString(1, user.getFullName());
-                ps.setString(2, user.getEmail());
-                ps.setString(3, user.getPasswordHash());
-                ps.setString(4, role.name());
-                ps.setTimestamp(5, toTimestamp(user.getLastLogin()));
-                return ps;
-            }, keyHolder);
-            Long key = extractKey(keyHolder, "user_id");
-            if (key == null) {
-                return user;
-            }
-            return findById(key).orElse(user);
+            return insertUser(user, role);
         }
-        jdbcTemplate.update(connection -> {
-            boolean postgres = isPostgres(connection);
-            String sql = postgres
-                ? "UPDATE users SET full_name = ?, email = ?, password_hash = ?, role = CAST(? AS user_role), "
-                    + "last_login = ? WHERE user_id = ?"
-                : "UPDATE users SET full_name = ?, email = ?, password_hash = ?, role = ?, last_login = ? "
-                    + "WHERE user_id = ?";
-            PreparedStatement ps = connection.prepareStatement(sql);
-            ps.setString(1, user.getFullName());
-            ps.setString(2, user.getEmail());
-            ps.setString(3, user.getPasswordHash());
-            ps.setString(4, role.name());
-            ps.setTimestamp(5, toTimestamp(user.getLastLogin()));
-            ps.setLong(6, user.getId());
-            return ps;
-        });
-        return findById(user.getId()).orElse(user);
+        return updateUser(user, role);
     }
 
     /**
@@ -191,6 +155,50 @@ public class UserRepository {
         } catch (Exception ex) {
             return false;
         }
+    }
+
+    private User insertUser(User user, UserRole role) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            boolean postgres = isPostgres(connection);
+            String sql = postgres
+                ? "INSERT INTO users (full_name, email, password_hash, role, last_login) "
+                    + "VALUES (?, ?, ?, CAST(? AS user_role), ?)"
+                : "INSERT INTO users (full_name, email, password_hash, role, last_login) "
+                    + "VALUES (?, ?, ?, ?, ?)";
+            PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            ps.setString(1, user.getFullName());
+            ps.setString(2, user.getEmail());
+            ps.setString(3, user.getPasswordHash());
+            ps.setString(4, role.name());
+            ps.setTimestamp(5, toTimestamp(user.getLastLogin()));
+            return ps;
+        }, keyHolder);
+        Long key = extractKey(keyHolder, "user_id");
+        if (key == null) {
+            return user;
+        }
+        return findById(key).orElse(user);
+    }
+
+    private User updateUser(User user, UserRole role) {
+        jdbcTemplate.update(connection -> {
+            boolean postgres = isPostgres(connection);
+            String sql = postgres
+                ? "UPDATE users SET full_name = ?, email = ?, password_hash = ?, role = CAST(? AS user_role), "
+                    + "last_login = ? WHERE user_id = ?"
+                : "UPDATE users SET full_name = ?, email = ?, password_hash = ?, role = ?, last_login = ? "
+                    + "WHERE user_id = ?";
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, user.getFullName());
+            ps.setString(2, user.getEmail());
+            ps.setString(3, user.getPasswordHash());
+            ps.setString(4, role.name());
+            ps.setTimestamp(5, toTimestamp(user.getLastLogin()));
+            ps.setLong(6, user.getId());
+            return ps;
+        });
+        return findById(user.getId()).orElse(user);
     }
 }
 

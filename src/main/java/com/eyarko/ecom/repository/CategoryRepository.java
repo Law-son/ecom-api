@@ -63,27 +63,9 @@ public class CategoryRepository {
      */
     public Category save(Category category) {
         if (category.getId() == null) {
-            KeyHolder keyHolder = new GeneratedKeyHolder();
-            jdbcTemplate.update(connection -> {
-                PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO categories (category_name) VALUES (?)",
-                    Statement.RETURN_GENERATED_KEYS
-                );
-                ps.setString(1, category.getName());
-                return ps;
-            }, keyHolder);
-            Long key = extractKey(keyHolder, "category_id");
-            if (key == null) {
-                return category;
-            }
-            return findById(key).orElse(category);
+            return insertCategory(category);
         }
-        jdbcTemplate.update(
-            "UPDATE categories SET category_name = ? WHERE category_id = ?",
-            category.getName(),
-            category.getId()
-        );
-        return findById(category.getId()).orElse(category);
+        return updateCategory(category);
     }
 
     /**
@@ -137,6 +119,32 @@ public class CategoryRepository {
         }
         Number key = keyHolder.getKey();
         return key == null ? null : key.longValue();
+    }
+
+    private Category insertCategory(Category category) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(
+                "INSERT INTO categories (category_name) VALUES (?)",
+                Statement.RETURN_GENERATED_KEYS
+            );
+            ps.setString(1, category.getName());
+            return ps;
+        }, keyHolder);
+        Long key = extractKey(keyHolder, "category_id");
+        if (key == null) {
+            return category;
+        }
+        return findById(key).orElse(category);
+    }
+
+    private Category updateCategory(Category category) {
+        jdbcTemplate.update(
+            "UPDATE categories SET category_name = ? WHERE category_id = ?",
+            category.getName(),
+            category.getId()
+        );
+        return findById(category.getId()).orElse(category);
     }
 }
 
