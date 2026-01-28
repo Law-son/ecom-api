@@ -17,11 +17,7 @@ public enum OrderStatus {
         if (value == null) {
             return null;
         }
-        String normalized = value.trim().toUpperCase();
-        if ("PROCESSING".equals(normalized)) {
-            return OrderStatus.PENDING;
-        }
-        return OrderStatus.valueOf(normalized);
+        return OrderStatus.valueOf(value.trim().toUpperCase());
     }
 }
 
