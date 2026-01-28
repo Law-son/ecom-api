@@ -14,6 +14,9 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+/**
+ * JDBC repository for user persistence.
+ */
 @Repository
 public class UserRepository {
     private final JdbcTemplate jdbcTemplate;
@@ -31,6 +34,12 @@ public class UserRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /**
+     * Finds a user by id.
+     *
+     * @param id user id
+     * @return optional user
+     */
     public Optional<User> findById(Long id) {
         return jdbcTemplate.query(
             "SELECT user_id, full_name, email, password_hash, role, created_at, last_login "
@@ -40,6 +49,12 @@ public class UserRepository {
         ).stream().findFirst();
     }
 
+    /**
+     * Finds a user by email (case-insensitive).
+     *
+     * @param email email address
+     * @return optional user
+     */
     public Optional<User> findByEmail(String email) {
         return jdbcTemplate.query(
             "SELECT user_id, full_name, email, password_hash, role, created_at, last_login "
@@ -49,6 +64,11 @@ public class UserRepository {
         ).stream().findFirst();
     }
 
+    /**
+     * Lists all users ordered by creation date.
+     *
+     * @return list of users
+     */
     public List<User> findAll() {
         return jdbcTemplate.query(
             "SELECT user_id, full_name, email, password_hash, role, created_at, last_login "
@@ -57,6 +77,12 @@ public class UserRepository {
         );
     }
 
+    /**
+     * Inserts or updates a user.
+     *
+     * @param user user to save
+     * @return saved user
+     */
     public User save(User user) {
         UserRole role = user.getRole() == null ? UserRole.CUSTOMER : user.getRole();
         if (user.getId() == null) {
@@ -101,6 +127,12 @@ public class UserRepository {
         return findById(user.getId()).orElse(user);
     }
 
+    /**
+     * Checks if a user exists by id.
+     *
+     * @param id user id
+     * @return true if present
+     */
     public boolean existsById(Long id) {
         Integer count = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM users WHERE user_id = ?",
@@ -110,6 +142,11 @@ public class UserRepository {
         return count != null && count > 0;
     }
 
+    /**
+     * Deletes a user by id.
+     *
+     * @param id user id
+     */
     public void deleteById(Long id) {
         jdbcTemplate.update("DELETE FROM users WHERE user_id = ?", id);
     }

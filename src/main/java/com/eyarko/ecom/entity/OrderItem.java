@@ -7,6 +7,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * SQL-backed order item model.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

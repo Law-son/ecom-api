@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+/**
+ * SQL-backed user model.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

@@ -17,6 +17,9 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+/**
+ * JDBC repository for product persistence.
+ */
 @Repository
 public class ProductRepository {
     private static final String BASE_SELECT =
@@ -44,6 +47,12 @@ public class ProductRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /**
+     * Finds a product by id with category info.
+     *
+     * @param id product id
+     * @return optional product
+     */
     public Optional<Product> findById(Long id) {
         return jdbcTemplate.query(
             BASE_SELECT + " WHERE p.product_id = ?",
@@ -52,6 +61,11 @@ public class ProductRepository {
         ).stream().findFirst();
     }
 
+    /**
+     * Lists all products ordered by name.
+     *
+     * @return list of products
+     */
     public List<Product> findAll() {
         return jdbcTemplate.query(
             BASE_SELECT + " ORDER BY p.name ASC",
@@ -59,6 +73,12 @@ public class ProductRepository {
         );
     }
 
+    /**
+     * Lists products with pagination.
+     *
+     * @param pageable paging options
+     * @return list of products
+     */
     public List<Product> findAll(Pageable pageable) {
         return jdbcTemplate.query(
             BASE_SELECT + " " + orderAndPage(pageable),
@@ -68,6 +88,13 @@ public class ProductRepository {
         );
     }
 
+    /**
+     * Lists products filtered by category.
+     *
+     * @param categoryId category id
+     * @param pageable paging options
+     * @return list of products
+     */
     public List<Product> findByCategoryId(Long categoryId, Pageable pageable) {
         return jdbcTemplate.query(
             BASE_SELECT + " WHERE p.category_id = ? " + orderAndPage(pageable),
@@ -78,6 +105,13 @@ public class ProductRepository {
         );
     }
 
+    /**
+     * Lists products filtered by name.
+     *
+     * @param name name filter
+     * @param pageable paging options
+     * @return list of products
+     */
     public List<Product> findByNameContainingIgnoreCase(String name, Pageable pageable) {
         String like = "%" + name.toLowerCase() + "%";
         return jdbcTemplate.query(
@@ -89,6 +123,14 @@ public class ProductRepository {
         );
     }
 
+    /**
+     * Lists products filtered by name or category name.
+     *
+     * @param name name filter
+     * @param categoryName category name filter
+     * @param pageable paging options
+     * @return list of products
+     */
     public List<Product> findByNameContainingIgnoreCaseOrCategory_NameContainingIgnoreCase(
         String name,
         String categoryName,
@@ -106,6 +148,14 @@ public class ProductRepository {
         );
     }
 
+    /**
+     * Lists products filtered by category and name.
+     *
+     * @param categoryId category id
+     * @param name name filter
+     * @param pageable paging options
+     * @return list of products
+     */
     public List<Product> findByCategoryIdAndNameContainingIgnoreCase(
         Long categoryId,
         String name,
@@ -122,6 +172,12 @@ public class ProductRepository {
         );
     }
 
+    /**
+     * Inserts or updates a product.
+     *
+     * @param product product to save
+     * @return saved product
+     */
     public Product save(Product product) {
         Long categoryId = product.getCategory() != null ? product.getCategory().getId() : null;
         BigDecimal avgRating = product.getAvgRating() == null ? BigDecimal.ZERO : product.getAvgRating();
@@ -164,6 +220,12 @@ public class ProductRepository {
         return findById(product.getId()).orElse(product);
     }
 
+    /**
+     * Checks if a product exists by id.
+     *
+     * @param id product id
+     * @return true if present
+     */
     public boolean existsById(Long id) {
         Integer count = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM products WHERE product_id = ?",
@@ -173,6 +235,11 @@ public class ProductRepository {
         return count != null && count > 0;
     }
 
+    /**
+     * Deletes a product by id.
+     *
+     * @param id product id
+     */
     public void deleteById(Long id) {
         jdbcTemplate.update("DELETE FROM products WHERE product_id = ?", id);
     }

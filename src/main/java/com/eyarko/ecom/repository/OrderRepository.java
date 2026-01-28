@@ -24,6 +24,9 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+/**
+ * JDBC repository for orders and their items.
+ */
 @Repository
 public class OrderRepository {
     private static final String ORDER_SELECT =
@@ -45,6 +48,12 @@ public class OrderRepository {
         this.namedJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
     }
 
+    /**
+     * Finds an order by id and loads its items.
+     *
+     * @param id order id
+     * @return optional order
+     */
     public Optional<Order> findById(Long id) {
         List<Order> orders = jdbcTemplate.query(
             ORDER_SELECT + " WHERE order_id = ?",
@@ -58,6 +67,12 @@ public class OrderRepository {
         return Optional.of(orders.get(0));
     }
 
+    /**
+     * Lists orders with pagination.
+     *
+     * @param pageable paging options
+     * @return list of orders
+     */
     public List<Order> findAll(Pageable pageable) {
         List<Order> orders = jdbcTemplate.query(
             ORDER_SELECT + " " + orderAndPage(pageable),
@@ -69,6 +84,13 @@ public class OrderRepository {
         return orders;
     }
 
+    /**
+     * Lists orders by user with pagination.
+     *
+     * @param userId user id
+     * @param pageable paging options
+     * @return list of orders
+     */
     public List<Order> findByUserId(Long userId, Pageable pageable) {
         List<Order> orders = jdbcTemplate.query(
             ORDER_SELECT + " WHERE user_id = ? " + orderAndPage(pageable),
@@ -81,6 +103,12 @@ public class OrderRepository {
         return orders;
     }
 
+    /**
+     * Inserts or updates an order and persists items on insert.
+     *
+     * @param order order to save
+     * @return saved order
+     */
     public Order save(Order order) {
         if (order.getId() == null) {
             KeyHolder keyHolder = new GeneratedKeyHolder();

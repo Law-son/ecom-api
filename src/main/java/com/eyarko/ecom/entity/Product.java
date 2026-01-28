@@ -8,6 +8,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * SQL-backed product model.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

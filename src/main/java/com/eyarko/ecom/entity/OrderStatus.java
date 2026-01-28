@@ -2,6 +2,9 @@ package com.eyarko.ecom.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
+/**
+ * Allowed order status values.
+ */
 public enum OrderStatus {
     PENDING,
     RECEIVED,

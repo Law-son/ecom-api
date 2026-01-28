@@ -7,6 +7,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * SQL-backed inventory model.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

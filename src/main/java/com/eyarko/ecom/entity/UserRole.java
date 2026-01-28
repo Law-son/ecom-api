@@ -2,6 +2,9 @@ package com.eyarko.ecom.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
+/**
+ * Allowed roles for SQL users.
+ */
 public enum UserRole {
     CUSTOMER,
     ADMIN;

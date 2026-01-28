@@ -13,6 +13,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
+/**
+ * JDBC repository for category persistence.
+ */
 @Repository
 public class CategoryRepository {
     private final JdbcTemplate jdbcTemplate;
@@ -26,6 +29,12 @@ public class CategoryRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /**
+     * Finds a category by id.
+     *
+     * @param id category id
+     * @return optional category
+     */
     public Optional<Category> findById(Long id) {
         return jdbcTemplate.query(
             "SELECT category_id, category_name, created_at FROM categories WHERE category_id = ?",
@@ -34,14 +43,11 @@ public class CategoryRepository {
         ).stream().findFirst();
     }
 
-    public Optional<Category> findByNameIgnoreCase(String name) {
-        return jdbcTemplate.query(
-            "SELECT category_id, category_name, created_at FROM categories WHERE LOWER(category_name) = LOWER(?)",
-            rowMapper,
-            name
-        ).stream().findFirst();
-    }
-
+    /**
+     * Lists all categories ordered by name.
+     *
+     * @return list of categories
+     */
     public List<Category> findAll() {
         return jdbcTemplate.query(
             "SELECT category_id, category_name, created_at FROM categories ORDER BY category_name ASC",
@@ -49,6 +55,12 @@ public class CategoryRepository {
         );
     }
 
+    /**
+     * Inserts or updates a category.
+     *
+     * @param category category to save
+     * @return saved category
+     */
     public Category save(Category category) {
         if (category.getId() == null) {
             KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -74,6 +86,12 @@ public class CategoryRepository {
         return findById(category.getId()).orElse(category);
     }
 
+    /**
+     * Checks if a category exists by id.
+     *
+     * @param id category id
+     * @return true if present
+     */
     public boolean existsById(Long id) {
         Integer count = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM categories WHERE category_id = ?",
@@ -83,6 +101,11 @@ public class CategoryRepository {
         return count != null && count > 0;
     }
 
+    /**
+     * Deletes a category by id.
+     *
+     * @param id category id
+     */
     public void deleteById(Long id) {
         jdbcTemplate.update("DELETE FROM categories WHERE category_id = ?", id);
     }

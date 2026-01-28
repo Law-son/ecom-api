@@ -13,6 +13,9 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+/**
+ * JDBC repository for inventory persistence.
+ */
 @Repository
 public class InventoryRepository {
     private final JdbcTemplate jdbcTemplate;
@@ -27,6 +30,12 @@ public class InventoryRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /**
+     * Finds inventory by product id.
+     *
+     * @param productId product id
+     * @return optional inventory
+     */
     public Optional<Inventory> findByProductId(Long productId) {
         return jdbcTemplate.query(
             "SELECT inventory_id, product_id, quantity, last_updated FROM inventory WHERE product_id = ?",
@@ -35,6 +44,12 @@ public class InventoryRepository {
         ).stream().findFirst();
     }
 
+    /**
+     * Inserts or updates inventory.
+     *
+     * @param inventory inventory to save
+     * @return saved inventory
+     */
     public Inventory save(Inventory inventory) {
         if (inventory.getId() == null) {
             KeyHolder keyHolder = new GeneratedKeyHolder();
