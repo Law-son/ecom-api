@@ -56,8 +56,10 @@ Base URL (dev): `http://localhost:8080`
 - `GET /api/orders/{id}`
 - `PATCH /api/orders/{id}/status`
   - Body: `status` (PENDING, RECEIVED, SHIPPED, DELIVERED, CANCELLED)
+  - Note: `PROCESSING` is not supported by the database enum.
 - `PUT /api/orders/{id}/status`
   - Body: `status` (PENDING, RECEIVED, SHIPPED, DELIVERED, CANCELLED)
+  - Note: `PROCESSING` is not supported by the database enum.
 
 ### Reviews (MongoDB)
 - `POST /api/reviews`
