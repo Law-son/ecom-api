@@ -4,11 +4,14 @@ import com.eyarko.ecom.dto.UserCreateRequest;
 import com.eyarko.ecom.dto.UserResponse;
 import com.eyarko.ecom.dto.UserUpdateRequest;
 import com.eyarko.ecom.entity.User;
+import com.eyarko.ecom.entity.UserRole;
 import com.eyarko.ecom.mapper.UserMapper;
 import com.eyarko.ecom.repository.UserRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -36,11 +39,12 @@ public class UserService {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
         }
+        UserRole resolvedRole = resolveRole(request);
         User user = User.builder()
             .fullName(request.getFullName())
             .email(request.getEmail())
             .passwordHash(passwordEncoder.encode(request.getPassword()))
-            .role(request.getRole())
+            .role(resolvedRole)
             .build();
         return UserMapper.toResponse(userRepository.save(user));
     }
@@ -108,6 +112,17 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
         userRepository.deleteById(id);
+    }
+
+    private UserRole resolveRole(UserCreateRequest request) {
+        if (request.getRole() == null) {
+            return UserRole.CUSTOMER;
+        }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = authentication != null
+            && authentication.isAuthenticated()
+            && authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        return isAdmin ? request.getRole() : UserRole.CUSTOMER;
     }
 }
 

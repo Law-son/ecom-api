@@ -19,5 +19,8 @@ public class AuthResponse {
     private String email;
     private UserRole role;
     private Instant lastLogin;
+    private String accessToken;
+    private String tokenType;
+    private Instant expiresAt;
 }
 
