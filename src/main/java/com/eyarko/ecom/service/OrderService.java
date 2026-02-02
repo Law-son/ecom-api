@@ -8,9 +8,13 @@ import com.eyarko.ecom.entity.Inventory;
 import com.eyarko.ecom.entity.Order;
 import com.eyarko.ecom.entity.OrderItem;
 import com.eyarko.ecom.entity.Product;
+import com.eyarko.ecom.entity.OrderStatus;
 import com.eyarko.ecom.entity.User;
 import com.eyarko.ecom.mapper.OrderMapper;
 import com.eyarko.ecom.repository.InventoryRepository;
+import com.eyarko.ecom.security.UserPrincipal;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import com.eyarko.ecom.repository.OrderRepository;
 import com.eyarko.ecom.repository.ProductRepository;
 import com.eyarko.ecom.repository.UserRepository;
@@ -102,7 +106,9 @@ public class OrderService {
     }
 
     /**
-     * Updates the status of an order.
+     * Updates the status of an order. Resolves the current user from JWT/session.
+     * Admin: allowed to set any status. Customer: only allowed to set RECEIVED when
+     * the order is DELIVERED and the order belongs to the current user.
      *
      * @param id order id
      * @param request status update payload
@@ -110,8 +116,33 @@ public class OrderService {
      */
     @Transactional
     public OrderResponse updateOrderStatus(Long id, OrderStatusUpdateRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+            || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Authentication required");
+        }
+        Long currentUserId = principal.getId();
+        boolean isAdmin = authentication.getAuthorities().stream()
+            .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        if (!isAdmin) {
+            Long orderUserId = order.getUser() != null ? order.getUser().getId() : null;
+            if (orderUserId == null || !orderUserId.equals(currentUserId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not the order owner");
+            }
+            if (request.getStatus() != OrderStatus.RECEIVED) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Customers can only set status to RECEIVED");
+            }
+            if (order.getStatus() != OrderStatus.DELIVERED) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Can only mark as RECEIVED when order status is DELIVERED");
+            }
+        }
+
         order.setStatus(request.getStatus());
         return OrderMapper.toResponse(orderRepository.save(order));
     }
