@@ -2,6 +2,35 @@
 
 Base URL (dev): `http://localhost:8080`
 
+## Security
+
+Authentication uses JWT bearer tokens.
+
+- Log in via `POST /api/auth/login` to receive `accessToken`, `tokenType`, and `expiresAt`.
+- Send the token on protected endpoints as `Authorization: Bearer <token>`.
+- Roles: `CUSTOMER`, `ADMIN`.
+
+Public endpoints:
+- `POST /api/auth/login`
+- `POST /api/users`
+- `GET /api/products/**`
+- `GET /api/categories/**`
+- `GET /api/reviews/**`
+- Swagger/OpenAPI: `/swagger-ui.html`, `/swagger-ui/**`, `/v3/api-docs/**`
+
+Authenticated endpoints:
+- `POST /api/orders`
+- `GET /api/orders/**`
+- `POST /api/reviews`
+- `POST /graphql` (all GraphQL queries/mutations)
+
+Admin-only endpoints:
+- `GET|PUT|DELETE /api/users/**` (user creation is public)
+- `POST|PUT|DELETE /api/products/**`
+- `POST|PUT|DELETE /api/categories/**`
+- `GET|POST /api/inventory/**`
+- `PUT|PATCH /api/orders/{id}/status`
+
 ## REST Endpoints
 
 ### Auth
@@ -10,10 +39,12 @@ Base URL (dev): `http://localhost:8080`
     - `email` (string, required)
     - `password` (string, required)
   - Response: `{ status, message, data }`
+  - `data` includes: `id`, `fullName`, `email`, `role`, `lastLogin`, `accessToken`, `tokenType`, `expiresAt`
 
 ### Users
 - `POST /api/users`
   - Body: `fullName`, `email`, `password`, `role`
+  - Note: `role` is only honored for authenticated admins; otherwise defaults to `CUSTOMER`.
 - `GET /api/users`
 - `GET /api/users/{id}`
 - `PUT /api/users/{id}`
