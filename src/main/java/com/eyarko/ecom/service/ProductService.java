@@ -6,8 +6,10 @@ import com.eyarko.ecom.entity.Category;
 import com.eyarko.ecom.entity.Product;
 import com.eyarko.ecom.mapper.ProductMapper;
 import com.eyarko.ecom.repository.CategoryRepository;
+import com.eyarko.ecom.repository.InventoryRepository;
 import com.eyarko.ecom.repository.ProductRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -23,10 +25,16 @@ import org.springframework.web.server.ResponseStatusException;
 public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final InventoryRepository inventoryRepository;
 
-    public ProductService(ProductRepository productRepository, CategoryRepository categoryRepository) {
+    public ProductService(
+        ProductRepository productRepository,
+        CategoryRepository categoryRepository,
+        InventoryRepository inventoryRepository
+    ) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
+        this.inventoryRepository = inventoryRepository;
     }
 
     /**
@@ -82,7 +90,10 @@ public class ProductService {
     public ProductResponse getProduct(Long id) {
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
-        return ProductMapper.toResponse(product);
+        int qty = inventoryRepository.findByProductId(id)
+            .map(inv -> inv.getQuantity() != null ? inv.getQuantity() : 0)
+            .orElse(0);
+        return ProductMapper.toResponse(product, qty);
     }
 
     /**
@@ -92,9 +103,11 @@ public class ProductService {
      */
     @Cacheable(value = "products", key = "'all'")
     public List<ProductResponse> listAllProducts() {
-        return productRepository.findAll()
-            .stream()
-            .map(ProductMapper::toResponse)
+        List<Product> products = productRepository.findAll();
+        List<Long> ids = products.stream().map(Product::getId).collect(Collectors.toList());
+        Map<Long, Integer> quantities = inventoryRepository.findQuantityByProductIds(ids);
+        return products.stream()
+            .map(p -> ProductMapper.toResponse(p, quantities.getOrDefault(p.getId(), 0)))
             .collect(Collectors.toList());
     }
 
@@ -126,7 +139,11 @@ public class ProductService {
         } else {
             products = productRepository.findAll(pageable);
         }
-        return products.stream().map(ProductMapper::toResponse).collect(Collectors.toList());
+        List<Long> ids = products.stream().map(Product::getId).collect(Collectors.toList());
+        Map<Long, Integer> quantities = inventoryRepository.findQuantityByProductIds(ids);
+        return products.stream()
+            .map(p -> ProductMapper.toResponse(p, quantities.getOrDefault(p.getId(), 0)))
+            .collect(Collectors.toList());
     }
 
     /**

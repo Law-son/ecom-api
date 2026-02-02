@@ -24,6 +24,10 @@ public class ProductResponse {
     private BigDecimal avgRating;
     private Integer reviewCount;
     private Instant createdAt;
+    /** Available quantity from inventory; null if no inventory row. */
+    private Integer stockQuantity;
+    /** True when stockQuantity != null and stockQuantity > 0. */
+    private Boolean inStock;
 }
 
 

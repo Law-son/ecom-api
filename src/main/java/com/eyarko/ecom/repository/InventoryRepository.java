@@ -5,8 +5,11 @@ import com.eyarko.ecom.entity.Product;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -42,6 +45,28 @@ public class InventoryRepository {
             rowMapper,
             productId
         ).stream().findFirst();
+    }
+
+    /**
+     * Finds quantity for each product id. Missing product ids get 0.
+     *
+     * @param productIds product ids
+     * @return map of product id to quantity
+     */
+    public Map<Long, Integer> findQuantityByProductIds(List<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        String placeholders = productIds.stream().map(id -> "?").collect(Collectors.joining(","));
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+            "SELECT product_id, quantity FROM inventory WHERE product_id IN (" + placeholders + ")",
+            productIds.toArray()
+        );
+        return rows.stream()
+            .collect(Collectors.toMap(
+                row -> ((Number) row.get("product_id")).longValue(),
+                row -> ((Number) row.get("quantity")).intValue()
+            ));
     }
 
     /**

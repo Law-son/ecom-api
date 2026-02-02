@@ -47,6 +47,8 @@ type Product {
   avgRating: Float
   reviewCount: Int
   createdAt: String
+  stockQuantity: Int
+  inStock: Boolean
 }
 
 type Inventory {
