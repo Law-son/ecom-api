@@ -128,6 +128,10 @@ public class OrderService {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cancelled orders cannot be updated");
+        }
+
         if (!isAdmin) {
             Long orderUserId = order.getUser() != null ? order.getUser().getId() : null;
             if (orderUserId == null || !orderUserId.equals(currentUserId)) {
@@ -141,6 +145,10 @@ public class OrderService {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Can only mark as RECEIVED when order status is DELIVERED");
             }
+        }
+
+        if (request.getStatus() == OrderStatus.CANCELLED) {
+            restockInventory(order);
         }
 
         order.setStatus(request.getStatus());
@@ -168,6 +176,18 @@ public class OrderService {
         }
         inventory.setQuantity(remaining);
         inventoryRepository.save(inventory);
+    }
+
+    private void restockInventory(Order order) {
+        if (order.getItems() == null || order.getItems().isEmpty()) {
+            return;
+        }
+        for (OrderItem item : order.getItems()) {
+            Inventory inventory = inventoryRepository.findByProductId(item.getProduct().getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Inventory not found"));
+            inventory.setQuantity(inventory.getQuantity() + item.getQuantity());
+            inventoryRepository.save(inventory);
+        }
     }
 
     private BigDecimal calculateTotal(List<OrderItem> items) {
