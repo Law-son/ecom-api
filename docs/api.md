@@ -60,6 +60,7 @@ Admin-only endpoints:
 - `PUT /api/categories/{id}`
   - Body: `name`
 - `DELETE /api/categories/{id}`
+  - Note: returns 409 if the category is linked to existing products.
 
 ### Products
 - `POST /api/products`
