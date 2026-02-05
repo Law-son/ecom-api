@@ -90,6 +90,16 @@ CREATE TABLE inventory (
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Backfill inventory status for existing rows
+UPDATE inventory
+SET status = CASE
+    WHEN quantity < 0 THEN 'Out of stock'
+    WHEN quantity = 1 THEN '1 unit left'
+    WHEN quantity <= 5 THEN quantity::text || ' units left'
+    WHEN quantity <= 10 THEN 'Few units in stock'
+    ELSE 'In stock'
+END;
+
 -- =========================
 -- CART TABLES
 -- =========================
