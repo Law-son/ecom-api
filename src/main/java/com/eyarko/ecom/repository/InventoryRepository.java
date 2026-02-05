@@ -26,6 +26,7 @@ public class InventoryRepository {
         .id(rs.getLong("inventory_id"))
         .product(Product.builder().id(rs.getLong("product_id")).build())
         .quantity((Integer) rs.getObject("quantity"))
+        .status(rs.getString("status"))
         .lastUpdated(toInstant(rs.getTimestamp("last_updated")))
         .build();
 
@@ -41,7 +42,7 @@ public class InventoryRepository {
      */
     public Optional<Inventory> findByProductId(Long productId) {
         return jdbcTemplate.query(
-            "SELECT inventory_id, product_id, quantity, last_updated FROM inventory WHERE product_id = ?",
+            "SELECT inventory_id, product_id, quantity, status, last_updated FROM inventory WHERE product_id = ?",
             rowMapper,
             productId
         ).stream().findFirst();
@@ -66,6 +67,22 @@ public class InventoryRepository {
             .collect(Collectors.toMap(
                 row -> ((Number) row.get("product_id")).longValue(),
                 row -> ((Number) row.get("quantity")).intValue()
+            ));
+    }
+
+    public Map<Long, String> findStatusByProductIds(List<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        String placeholders = productIds.stream().map(id -> "?").collect(Collectors.joining(","));
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+            "SELECT product_id, status FROM inventory WHERE product_id IN (" + placeholders + ")",
+            productIds.toArray()
+        );
+        return rows.stream()
+            .collect(Collectors.toMap(
+                row -> ((Number) row.get("product_id")).longValue(),
+                row -> (String) row.get("status")
             ));
     }
 
@@ -115,11 +132,12 @@ public class InventoryRepository {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
-                "INSERT INTO inventory (product_id, quantity, last_updated) VALUES (?, ?, NOW())",
+                "INSERT INTO inventory (product_id, quantity, status, last_updated) VALUES (?, ?, ?, NOW())",
                 Statement.RETURN_GENERATED_KEYS
             );
             ps.setLong(1, inventory.getProduct().getId());
             ps.setInt(2, inventory.getQuantity());
+            ps.setString(3, inventory.getStatus());
             return ps;
         }, keyHolder);
         Long key = extractKey(keyHolder, "inventory_id");
@@ -135,8 +153,9 @@ public class InventoryRepository {
 
     private Inventory updateInventory(Inventory inventory) {
         jdbcTemplate.update(
-            "UPDATE inventory SET quantity = ?, last_updated = NOW() WHERE inventory_id = ?",
+            "UPDATE inventory SET quantity = ?, status = ?, last_updated = NOW() WHERE inventory_id = ?",
             inventory.getQuantity(),
+            inventory.getStatus(),
             inventory.getId()
         );
         return findByProductId(inventory.getProduct().getId()).orElse(inventory);

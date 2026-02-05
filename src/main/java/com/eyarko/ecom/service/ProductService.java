@@ -8,6 +8,7 @@ import com.eyarko.ecom.mapper.ProductMapper;
 import com.eyarko.ecom.repository.CategoryRepository;
 import com.eyarko.ecom.repository.InventoryRepository;
 import com.eyarko.ecom.repository.ProductRepository;
+import com.eyarko.ecom.util.InventoryStatusUtil;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -90,10 +91,10 @@ public class ProductService {
     public ProductResponse getProduct(Long id) {
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
-        int qty = inventoryRepository.findByProductId(id)
-            .map(inv -> inv.getQuantity() != null ? inv.getQuantity() : 0)
-            .orElse(0);
-        return ProductMapper.toResponse(product, qty);
+        String status = inventoryRepository.findByProductId(id)
+            .map(inv -> inv.getStatus() != null ? inv.getStatus() : InventoryStatusUtil.resolveStatus(inv.getQuantity()))
+            .orElse(InventoryStatusUtil.resolveStatus(0));
+        return ProductMapper.toResponse(product, status);
     }
 
     /**
@@ -105,9 +106,12 @@ public class ProductService {
     public List<ProductResponse> listAllProducts() {
         List<Product> products = productRepository.findAll();
         List<Long> ids = products.stream().map(Product::getId).collect(Collectors.toList());
-        Map<Long, Integer> quantities = inventoryRepository.findQuantityByProductIds(ids);
+        Map<Long, String> statuses = inventoryRepository.findStatusByProductIds(ids);
         return products.stream()
-            .map(p -> ProductMapper.toResponse(p, quantities.getOrDefault(p.getId(), 0)))
+            .map(p -> ProductMapper.toResponse(p, statuses.getOrDefault(
+                p.getId(),
+                InventoryStatusUtil.resolveStatus(0)
+            )))
             .collect(Collectors.toList());
     }
 
@@ -140,9 +144,12 @@ public class ProductService {
             products = productRepository.findAll(pageable);
         }
         List<Long> ids = products.stream().map(Product::getId).collect(Collectors.toList());
-        Map<Long, Integer> quantities = inventoryRepository.findQuantityByProductIds(ids);
+        Map<Long, String> statuses = inventoryRepository.findStatusByProductIds(ids);
         return products.stream()
-            .map(p -> ProductMapper.toResponse(p, quantities.getOrDefault(p.getId(), 0)))
+            .map(p -> ProductMapper.toResponse(p, statuses.getOrDefault(
+                p.getId(),
+                InventoryStatusUtil.resolveStatus(0)
+            )))
             .collect(Collectors.toList());
     }
 

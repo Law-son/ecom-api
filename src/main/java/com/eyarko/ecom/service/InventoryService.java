@@ -7,6 +7,7 @@ import com.eyarko.ecom.entity.Product;
 import com.eyarko.ecom.mapper.InventoryMapper;
 import com.eyarko.ecom.repository.InventoryRepository;
 import com.eyarko.ecom.repository.ProductRepository;
+import com.eyarko.ecom.util.InventoryStatusUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -37,6 +38,7 @@ public class InventoryService {
         Inventory inventory = inventoryRepository.findByProductId(product.getId())
             .orElseGet(() -> Inventory.builder().product(product).build());
         inventory.setQuantity(request.getQuantity());
+        inventory.setStatus(InventoryStatusUtil.resolveStatus(request.getQuantity()));
         return InventoryMapper.toResponse(inventoryRepository.save(inventory));
     }
 
@@ -55,6 +57,7 @@ public class InventoryService {
             .orElseGet(() -> InventoryResponse.builder()
                 .productId(productId)
                 .quantity(0)
+                .status(InventoryStatusUtil.resolveStatus(0))
                 .lastUpdated(null)
                 .build());
     }

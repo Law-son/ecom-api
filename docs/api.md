@@ -73,6 +73,7 @@ Admin-only endpoints:
 - `PUT /api/products/{id}`
   - Body: `categoryId`, `name`, `description`, `price`, `imageUrl`
 - `DELETE /api/products/{id}`
+  - Note: product responses include `stockStatus` derived from inventory quantity.
 
 ### Cart
 - `GET /api/cart`
@@ -89,6 +90,7 @@ Admin-only endpoints:
 - `POST /api/inventory/adjust`
   - Body: `productId`, `quantity`
 - `GET /api/inventory/{productId}`
+  - Response includes `status` derived from inventory quantity.
 
 ### Orders
 - `POST /api/orders`

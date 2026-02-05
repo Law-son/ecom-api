@@ -15,6 +15,7 @@ import lombok.Setter;
 public class InventoryResponse {
     private Long productId;
     private Integer quantity;
+    private String status;
     private Instant lastUpdated;
 }
 

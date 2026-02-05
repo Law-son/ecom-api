@@ -18,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.eyarko.ecom.repository.OrderRepository;
 import com.eyarko.ecom.repository.ProductRepository;
 import com.eyarko.ecom.repository.UserRepository;
+import com.eyarko.ecom.util.InventoryStatusUtil;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -175,6 +176,7 @@ public class OrderService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient stock");
         }
         inventory.setQuantity(remaining);
+        inventory.setStatus(InventoryStatusUtil.resolveStatus(remaining));
         inventoryRepository.save(inventory);
     }
 
@@ -185,7 +187,9 @@ public class OrderService {
         for (OrderItem item : order.getItems()) {
             Inventory inventory = inventoryRepository.findByProductId(item.getProduct().getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Inventory not found"));
-            inventory.setQuantity(inventory.getQuantity() + item.getQuantity());
+            int updated = inventory.getQuantity() + item.getQuantity();
+            inventory.setQuantity(updated);
+            inventory.setStatus(InventoryStatusUtil.resolveStatus(updated));
             inventoryRepository.save(inventory);
         }
     }
