@@ -19,6 +19,7 @@ Public endpoints:
 - Swagger/OpenAPI: `/swagger-ui.html`, `/swagger-ui/**`, `/v3/api-docs/**`
 
 Authenticated endpoints:
+- `GET|POST|PATCH|DELETE /api/cart/**`
 - `POST /api/orders`
 - `GET /api/orders/**`
 - `POST /api/reviews`
@@ -71,6 +72,17 @@ Admin-only endpoints:
 - `PUT /api/products/{id}`
   - Body: `categoryId`, `name`, `description`, `price`, `imageUrl`
 - `DELETE /api/products/{id}`
+
+### Cart
+- `GET /api/cart`
+  - Returns the authenticated user's cart and totals.
+- `POST /api/cart/items`
+  - Body: `productId`, `quantity`
+- `PATCH /api/cart/items/{productId}`
+  - Body: `quantity`
+- `DELETE /api/cart/items/{productId}`
+- `DELETE /api/cart`
+  - Clears all items from the cart.
 
 ### Inventory
 - `POST /api/inventory/adjust`

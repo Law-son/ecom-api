@@ -9,13 +9,17 @@ import com.eyarko.ecom.controller.ReviewController;
 import com.eyarko.ecom.controller.UserController;
 import com.eyarko.ecom.graphql.MutationController;
 import com.eyarko.ecom.graphql.QueryController;
+import com.eyarko.ecom.repository.ReviewRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest
+@ActiveProfiles("test")
 class EcomApplicationTests {
 	@Autowired
 	private AuthController authController;
@@ -43,6 +47,9 @@ class EcomApplicationTests {
 
 	@Autowired
 	private QueryController queryController;
+
+	@MockBean
+	private ReviewRepository reviewRepository;
 
 	@Test
 	void contextLoads() {

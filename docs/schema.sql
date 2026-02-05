@@ -7,6 +7,8 @@
 
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS cart_items;
+DROP TABLE IF EXISTS carts;
 DROP TABLE IF EXISTS inventory;
 
 -- Drop dependent tables FIRST
@@ -88,6 +90,28 @@ CREATE TABLE inventory (
 );
 
 -- =========================
+-- CART TABLES
+-- =========================
+
+CREATE TABLE carts (
+    cart_id SERIAL PRIMARY KEY,
+    user_id INT UNIQUE NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE cart_items (
+    cart_item_id SERIAL PRIMARY KEY,
+    cart_id INT NOT NULL REFERENCES carts(cart_id) ON DELETE CASCADE,
+    product_id INT NOT NULL REFERENCES products(product_id),
+    quantity INT NOT NULL CHECK (quantity > 0),
+    unit_price DECIMAL(10, 2) NOT NULL CHECK (unit_price >= 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (cart_id, product_id)
+);
+
+-- =========================
 -- ORDERS TABLE
 -- =========================
 
@@ -121,6 +145,9 @@ CREATE INDEX idx_categories_name_lower ON categories (LOWER(category_name));
 CREATE INDEX idx_products_category_id ON products (category_id);
 CREATE INDEX idx_products_avg_rating ON products (avg_rating DESC);
 CREATE INDEX idx_users_email ON users (email);
+CREATE INDEX idx_carts_user_id ON carts (user_id);
+CREATE INDEX idx_cart_items_cart_id ON cart_items (cart_id);
+CREATE INDEX idx_cart_items_product_id ON cart_items (product_id);
 CREATE INDEX idx_orders_user_id ON orders (user_id);
 
 -- =========================
