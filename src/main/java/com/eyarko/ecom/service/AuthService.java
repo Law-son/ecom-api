@@ -1,6 +1,5 @@
 package com.eyarko.ecom.service;
 
-import com.eyarko.ecom.dto.AuthResponse;
 import com.eyarko.ecom.dto.LoginRequest;
 import com.eyarko.ecom.entity.User;
 import com.eyarko.ecom.repository.UserRepository;
@@ -30,9 +29,9 @@ public class AuthService {
      * Authenticates a user by email and password.
      *
      * @param request login payload
-     * @return authentication response
+     * @return JWT token only; client decodes payload for user details
      */
-    public AuthResponse login(LoginRequest request) {
+    public String login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
 
@@ -42,18 +41,7 @@ public class AuthService {
 
         user.setLastLogin(Instant.now());
         userRepository.save(user);
-        String token = jwtService.generateToken(user);
-
-        return AuthResponse.builder()
-            .id(user.getId())
-            .fullName(user.getFullName())
-            .email(user.getEmail())
-            .role(user.getRole())
-            .lastLogin(user.getLastLogin())
-            .accessToken(token)
-            .tokenType("Bearer")
-            .expiresAt(jwtService.extractExpiry(token))
-            .build();
+        return jwtService.generateToken(user);
     }
 }
 

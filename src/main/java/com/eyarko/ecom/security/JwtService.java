@@ -33,8 +33,10 @@ public class JwtService {
             .subject(user.getEmail())
             .issuedAt(Date.from(now))
             .expiration(Date.from(expiry))
-            .claim("role", user.getRole().name())
             .claim("userId", user.getId())
+            .claim("role", user.getRole().name())
+            .claim("fullName", user.getFullName())
+            .claim("lastLogin", user.getLastLogin() != null ? user.getLastLogin().toString() : null)
             .signWith(signingKey, Jwts.SIG.HS256)
             .compact();
     }

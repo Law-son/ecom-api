@@ -1,7 +1,6 @@
 package com.eyarko.ecom.controller;
 
 import com.eyarko.ecom.dto.ApiResponse;
-import com.eyarko.ecom.dto.AuthResponse;
 import com.eyarko.ecom.dto.LoginRequest;
 import com.eyarko.ecom.service.AuthService;
 import com.eyarko.ecom.util.ResponseUtil;
@@ -27,10 +26,10 @@ public class AuthController {
      * Authenticates a user using email/password credentials.
      *
      * @param request login request payload
-     * @return authentication response with user details
+     * @return success with JWT token in data; client decodes token for user details
      */
     @PostMapping("/login")
-    public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ApiResponse<String> login(@Valid @RequestBody LoginRequest request) {
         return ResponseUtil.success("Login successful", authService.login(request));
     }
 }
