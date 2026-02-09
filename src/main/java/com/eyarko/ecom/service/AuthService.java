@@ -5,6 +5,7 @@ import com.eyarko.ecom.entity.User;
 import com.eyarko.ecom.repository.UserRepository;
 import com.eyarko.ecom.security.JwtService;
 import java.time.Instant;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,8 +32,9 @@ public class AuthService {
      * @param request login payload
      * @return JWT token only; client decodes payload for user details
      */
+    @CacheEvict(value = "users", allEntries = true)
     public String login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(request.getEmail())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {

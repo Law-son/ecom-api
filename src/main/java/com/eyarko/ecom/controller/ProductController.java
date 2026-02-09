@@ -1,6 +1,7 @@
 package com.eyarko.ecom.controller;
 
 import com.eyarko.ecom.dto.ApiResponse;
+import com.eyarko.ecom.dto.PagedResponse;
 import com.eyarko.ecom.dto.ProductRequest;
 import com.eyarko.ecom.dto.ProductResponse;
 import com.eyarko.ecom.service.ProductService;
@@ -91,7 +92,7 @@ public class ProductController {
      * @return list of products
      */
     @GetMapping
-    public ApiResponse<List<ProductResponse>> listProducts(
+    public ApiResponse<PagedResponse<ProductResponse>> listProducts(
         @RequestParam(required = false) Long categoryId,
         @RequestParam(required = false) String search,
         @RequestParam(defaultValue = "0") int page,

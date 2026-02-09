@@ -7,9 +7,12 @@ import com.eyarko.ecom.entity.Product;
 import com.eyarko.ecom.mapper.InventoryMapper;
 import com.eyarko.ecom.repository.InventoryRepository;
 import com.eyarko.ecom.repository.ProductRepository;
-import com.eyarko.ecom.util.InventoryStatusUtil;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -31,14 +34,15 @@ public class InventoryService {
      * @param request inventory adjustment payload
      * @return updated inventory
      */
+    @CacheEvict(value = "products", allEntries = true)
+    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     public InventoryResponse adjustInventory(InventoryAdjustRequest request) {
         Product product = productRepository.findById(request.getProductId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
 
-        Inventory inventory = inventoryRepository.findByProductId(product.getId())
+        Inventory inventory = inventoryRepository.findByProduct_Id(product.getId())
             .orElseGet(() -> Inventory.builder().product(product).build());
         inventory.setQuantity(request.getQuantity());
-        inventory.setStatus(InventoryStatusUtil.resolveStatus(request.getQuantity()));
         return InventoryMapper.toResponse(inventoryRepository.save(inventory));
     }
 
@@ -52,12 +56,11 @@ public class InventoryService {
         if (!productRepository.existsById(productId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
         }
-        return inventoryRepository.findByProductId(productId)
+        return inventoryRepository.findByProduct_Id(productId)
             .map(InventoryMapper::toResponse)
             .orElseGet(() -> InventoryResponse.builder()
                 .productId(productId)
                 .quantity(0)
-                .status(InventoryStatusUtil.resolveStatus(0))
                 .lastUpdated(null)
                 .build());
     }

@@ -1,5 +1,6 @@
 package com.eyarko.ecom.service;
 
+import com.eyarko.ecom.dto.PagedResponse;
 import com.eyarko.ecom.dto.ProductRequest;
 import com.eyarko.ecom.dto.ProductResponse;
 import com.eyarko.ecom.entity.Category;
@@ -8,15 +9,16 @@ import com.eyarko.ecom.mapper.ProductMapper;
 import com.eyarko.ecom.repository.CategoryRepository;
 import com.eyarko.ecom.repository.InventoryRepository;
 import com.eyarko.ecom.repository.ProductRepository;
-import com.eyarko.ecom.util.InventoryStatusUtil;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -88,13 +90,14 @@ public class ProductService {
      * @return product details
      */
     @Cacheable(value = "products", key = "'product:' + #id")
+    @Transactional(readOnly = true)
     public ProductResponse getProduct(Long id) {
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
-        String status = inventoryRepository.findByProductId(id)
-            .map(inv -> inv.getStatus() != null ? inv.getStatus() : InventoryStatusUtil.resolveStatus(inv.getQuantity()))
-            .orElse(InventoryStatusUtil.resolveStatus(0));
-        return ProductMapper.toResponse(product, status);
+        int qty = inventoryRepository.findByProduct_Id(id)
+            .map(inv -> inv.getQuantity() != null ? inv.getQuantity() : 0)
+            .orElse(0);
+        return ProductMapper.toResponse(product, qty);
     }
 
     /**
@@ -103,15 +106,13 @@ public class ProductService {
      * @return list of products
      */
     @Cacheable(value = "products", key = "'all'")
+    @Transactional(readOnly = true)
     public List<ProductResponse> listAllProducts() {
         List<Product> products = productRepository.findAll();
         List<Long> ids = products.stream().map(Product::getId).collect(Collectors.toList());
-        Map<Long, String> statuses = inventoryRepository.findStatusByProductIds(ids);
+        Map<Long, Integer> quantities = loadQuantities(ids);
         return products.stream()
-            .map(p -> ProductMapper.toResponse(p, statuses.getOrDefault(
-                p.getId(),
-                InventoryStatusUtil.resolveStatus(0)
-            )))
+            .map(p -> ProductMapper.toResponse(p, quantities.getOrDefault(p.getId(), 0)))
             .collect(Collectors.toList());
     }
 
@@ -128,29 +129,33 @@ public class ProductService {
         key = "'list:' + #categoryId + ':' + #search + ':' + #pageable.pageNumber + ':' + #pageable.pageSize "
             + "+ ':' + #pageable.sort.toString()"
     )
-    public List<ProductResponse> listProducts(Long categoryId, String search, Pageable pageable) {
-        List<Product> products;
+    @Transactional(readOnly = true)
+    public PagedResponse<ProductResponse> listProducts(Long categoryId, String search, Pageable pageable) {
+        Page<Product> page;
         if (categoryId != null && search != null && !search.isBlank()) {
-            products = productRepository.findByCategoryIdAndNameContainingIgnoreCase(categoryId, search, pageable);
+            page = productRepository.findByCategory_IdAndNameContainingIgnoreCase(categoryId, search, pageable);
         } else if (categoryId != null) {
-            products = productRepository.findByCategoryId(categoryId, pageable);
+            page = productRepository.findByCategory_Id(categoryId, pageable);
         } else if (search != null && !search.isBlank()) {
-            products = productRepository.findByNameContainingIgnoreCaseOrCategory_NameContainingIgnoreCase(
-                search,
-                search,
-                pageable
-            );
+            page = productRepository.searchByNameOrCategory(search, pageable);
         } else {
-            products = productRepository.findAll(pageable);
+            page = productRepository.findAll(pageable);
         }
+        List<Product> products = page.getContent();
         List<Long> ids = products.stream().map(Product::getId).collect(Collectors.toList());
-        Map<Long, String> statuses = inventoryRepository.findStatusByProductIds(ids);
-        return products.stream()
-            .map(p -> ProductMapper.toResponse(p, statuses.getOrDefault(
-                p.getId(),
-                InventoryStatusUtil.resolveStatus(0)
-            )))
+        Map<Long, Integer> quantities = loadQuantities(ids);
+        List<ProductResponse> items = products.stream()
+            .map(p -> ProductMapper.toResponse(p, quantities.getOrDefault(p.getId(), 0)))
             .collect(Collectors.toList());
+        return PagedResponse.<ProductResponse>builder()
+            .items(items)
+            .page(page.getNumber())
+            .size(page.getSize())
+            .totalElements(page.getTotalElements())
+            .totalPages(page.getTotalPages())
+            .hasNext(page.hasNext())
+            .hasPrevious(page.hasPrevious())
+            .build();
     }
 
     /**
@@ -164,6 +169,17 @@ public class ProductService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
         }
         productRepository.deleteById(id);
+    }
+
+    private Map<Long, Integer> loadQuantities(List<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return Map.of();
+        }
+        return inventoryRepository.findQuantitiesByProductIds(productIds).stream()
+            .collect(Collectors.toMap(
+                view -> view.getProductId(),
+                view -> view.getQuantity() == null ? 0 : view.getQuantity()
+            ));
     }
 }
 

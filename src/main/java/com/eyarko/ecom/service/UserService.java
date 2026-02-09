@@ -9,6 +9,8 @@ import com.eyarko.ecom.mapper.UserMapper;
 import com.eyarko.ecom.repository.UserRepository;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -35,8 +37,9 @@ public class UserService {
      * @param request user payload
      * @return created user
      */
+    @CacheEvict(value = "users", allEntries = true)
     public UserResponse createUser(UserCreateRequest request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+        if (userRepository.findByEmailIgnoreCase(request.getEmail()).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
         }
         UserRole resolvedRole = resolveRole(request);
@@ -55,6 +58,7 @@ public class UserService {
      * @param id user id
      * @return user details
      */
+    @Cacheable(value = "users", key = "'user:' + #id")
     public UserResponse getUser(Long id) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
@@ -79,12 +83,13 @@ public class UserService {
      * @param request user payload
      * @return updated user
      */
+    @CacheEvict(value = "users", allEntries = true)
     public UserResponse updateUser(Long id, UserUpdateRequest request) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         if (request.getEmail() != null && !request.getEmail().equalsIgnoreCase(user.getEmail())) {
-            if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            if (userRepository.findByEmailIgnoreCase(request.getEmail()).isPresent()) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
             }
             user.setEmail(request.getEmail());
@@ -107,6 +112,7 @@ public class UserService {
      *
      * @param id user id
      */
+    @CacheEvict(value = "users", allEntries = true)
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");

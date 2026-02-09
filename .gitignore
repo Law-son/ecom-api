@@ -32,4 +32,5 @@ build/
 ### VS Code ###
 .vscode/
 project_plan.md
+plan.md
 .env

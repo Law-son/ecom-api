@@ -78,7 +78,7 @@ public class QueryController {
         int resolvedSize = size == null ? 20 : size;
         Sort.Direction direction = parseDirection(sortDir);
         Pageable pageable = PageRequest.of(resolvedPage, resolvedSize, Sort.by(direction, mapSortField(sortBy)));
-        return productService.listProducts(categoryId, search, pageable);
+        return productService.listProducts(categoryId, search, pageable).getItems();
     }
 
     /**
@@ -114,7 +114,7 @@ public class QueryController {
         int resolvedPage = page == null ? 0 : page;
         int resolvedSize = size == null ? 20 : size;
         Pageable pageable = PageRequest.of(resolvedPage, resolvedSize, Sort.by(Sort.Direction.DESC, "orderDate"));
-        return orderService.listOrders(userId, pageable);
+        return orderService.listOrders(userId, pageable).getItems();
     }
 
     /**
