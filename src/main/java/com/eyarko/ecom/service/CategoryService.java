@@ -7,6 +7,9 @@ import com.eyarko.ecom.mapper.CategoryMapper;
 import com.eyarko.ecom.repository.CategoryRepository;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -28,6 +31,7 @@ public class CategoryService {
      * @param request category payload
      * @return created category
      */
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponse createCategory(CategoryRequest request) {
         Category category = Category.builder()
             .name(request.getName())
@@ -42,6 +46,7 @@ public class CategoryService {
      * @param request category payload
      * @return updated category
      */
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponse updateCategory(Long id, CategoryRequest request) {
         Category category = categoryRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
@@ -55,6 +60,7 @@ public class CategoryService {
      * @param id category id
      * @return category details
      */
+    @Cacheable(value = "categories", key = "'category:' + #id")
     public CategoryResponse getCategory(Long id) {
         Category category = categoryRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
@@ -66,8 +72,9 @@ public class CategoryService {
      *
      * @return list of categories
      */
+    @Cacheable(value = "categories", key = "'all'")
     public List<CategoryResponse> listCategories() {
-        return categoryRepository.findAll().stream()
+        return categoryRepository.findAll(Sort.by("name")).stream()
             .map(CategoryMapper::toResponse)
             .collect(Collectors.toList());
     }
@@ -77,6 +84,7 @@ public class CategoryService {
      *
      * @param id category id
      */
+    @CacheEvict(value = "categories", allEntries = true)
     public void deleteCategory(Long id) {
         if (!categoryRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found");

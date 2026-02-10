@@ -9,12 +9,10 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
 
-@JdbcTest
-@Import({ProductRepository.class, CategoryRepository.class})
+@DataJpaTest
 @ActiveProfiles("test")
 class ProductRepositoryTest {
     @Autowired
@@ -37,7 +35,7 @@ class ProductRepositoryTest {
         List<Product> results = productRepository.findByNameContainingIgnoreCase(
             "laptop",
             PageRequest.of(0, 10)
-        );
+        ).getContent();
 
         assertThat(results).hasSize(1);
         assertThat(results.get(0).getName()).isEqualTo("Laptop Pro");

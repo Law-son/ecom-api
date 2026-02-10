@@ -26,7 +26,7 @@ public final class CartMapper {
 
         return CartResponse.builder()
             .id(cart.getId())
-            .userId(cart.getUserId())
+            .userId(cart.getUser() != null ? cart.getUser().getId() : null)
             .items(itemResponses)
             .totalItems(totalItems)
             .totalAmount(totalAmount)

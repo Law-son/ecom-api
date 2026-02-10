@@ -4,10 +4,10 @@ import com.eyarko.ecom.dto.ApiResponse;
 import com.eyarko.ecom.dto.OrderCreateRequest;
 import com.eyarko.ecom.dto.OrderResponse;
 import com.eyarko.ecom.dto.OrderStatusUpdateRequest;
+import com.eyarko.ecom.dto.PagedResponse;
 import com.eyarko.ecom.service.OrderService;
 import com.eyarko.ecom.util.ResponseUtil;
 import jakarta.validation.Valid;
-import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -66,7 +66,7 @@ public class OrderController {
      * @return list of orders
      */
     @GetMapping
-    public ApiResponse<List<OrderResponse>> listOrders(
+    public ApiResponse<PagedResponse<OrderResponse>> listOrders(
         @RequestParam(required = false) Long userId,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size,

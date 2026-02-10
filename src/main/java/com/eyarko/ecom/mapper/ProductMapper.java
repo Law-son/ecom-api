@@ -12,11 +12,12 @@ public final class ProductMapper {
         return toResponse(product, null);
     }
 
-    public static ProductResponse toResponse(Product product, String stockStatus) {
+    public static ProductResponse toResponse(Product product, Integer stockQuantity) {
         if (product == null) {
             return null;
         }
         Category category = product.getCategory();
+        boolean inStock = stockQuantity != null && stockQuantity > 0;
         return ProductResponse.builder()
             .id(product.getId())
             .categoryId(category != null ? category.getId() : null)
@@ -28,7 +29,8 @@ public final class ProductMapper {
             .avgRating(product.getAvgRating())
             .reviewCount(product.getReviewCount())
             .createdAt(product.getCreatedAt())
-            .stockStatus(stockStatus)
+            .stockQuantity(stockQuantity)
+            .inStock(inStock)
             .build();
     }
 }
