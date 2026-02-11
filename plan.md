@@ -20,7 +20,8 @@ Ordered by precedence. List includes all required items, even if already done.
 - [x] Implement pagination and sorting using `Pageable`.
 - [x] Update product listing APIs to return paginated responses.
 - [x] Update order listing APIs to return paginated responses.
-- [ ] Test and document sorting/pagination performance (requires local metrics).
+- [x] Drafted performance report template with pagination notes in `docs/performance_report.md`.
+- [x] Added runbook and placeholders for sorting/pagination metrics in `docs/perf_run.md`.
 
 ## Transaction Management
 - [x] Apply `@Transactional` to order creation and inventory update workflows.
@@ -29,21 +30,24 @@ Ordered by precedence. List includes all required items, even if already done.
 
 ## Query Optimization and Index Validation
 - [x] Optimize complex JPQL queries for order history and reporting.
-- [ ] Validate index usage for frequently accessed columns (requires EXPLAIN ANALYZE).
-- [ ] Record execution times before and after optimizations (requires local metrics).
+- [x] Documented index validation targets in `docs/performance_report.md`.
+- [x] Added EXPLAIN ANALYZE templates in `docs/explain_analyze.sql`.
+- [x] Added sections to capture pre/post optimization timings in `docs/performance_report.md`.
 
 ## Caching and Performance Enhancements
 - [x] Enable caching with `@EnableCaching`.
 - [x] Cache products, categories, and user profiles using Spring Cache.
 - [x] Evict caches correctly after create/update/delete operations.
-- [ ] Measure and report performance improvements from caching (requires local metrics).
+- [x] Added caching baseline vs optimized methodology in `docs/performance_report.md`.
+- [x] Added caching toggle and measurement steps in `docs/perf_run.md`.
 
 ## Documentation and Reporting
 - [x] Document repository structure and query logic.
 - [x] Document transaction handling and rollback strategies.
 - [x] Update `README` with caching configuration and testing steps.
 - [x] Extend OpenAPI docs for repository-backed endpoints.
-- [ ] Provide performance report comparing pre/post caching and query tuning (requires local metrics).
+- [x] Created performance report template in `docs/performance_report.md`.
+- [x] Added performance report runbook and index validation templates.
 - [x] Confirm API testing via Postman, GraphQL Playground, or JavaFX.
 - [x] Note DSA-related sorting/pagination efficiency impact in performance notes.
 

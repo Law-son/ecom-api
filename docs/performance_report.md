@@ -14,6 +14,7 @@ This report compares REST and GraphQL performance for key operations:
 - Metrics: Response time (ms), payload size (KB)
 - Baseline: caching disabled (comment out cache annotations or set a no-op cache)
 - Optimized: caching enabled + JPQL/natives with entity graphs
+- Runbook: `docs/perf_run.md`
 
 ## Results (Fill With Local Measurements)
 | Operation | Baseline REST Avg (ms) | Optimized REST Avg (ms) | Baseline GraphQL Avg (ms) | Optimized GraphQL Avg (ms) | Notes |
@@ -22,6 +23,18 @@ This report compares REST and GraphQL performance for key operations:
 | Product by ID | TBD | TBD | TBD | TBD | Includes inventory lookup |
 | Create order | TBD | TBD | TBD | TBD | Transactional inventory updates |
 | Add review | TBD | TBD | TBD | TBD | Mongo write |
+
+## Index Validation Results (EXPLAIN ANALYZE)
+Paste the most relevant query plan lines here, especially the index usage and
+actual time/rows. Templates live in `docs/explain_analyze.sql`.
+- Products by category:
+  - TBD
+- Products by name search:
+  - TBD
+- Categories by name:
+  - TBD
+- Orders by user:
+  - TBD
 
 ## Observations
 - Entity graphs reduce N+1 lookups on product/category and order/item data.
