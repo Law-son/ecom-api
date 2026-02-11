@@ -8,7 +8,7 @@ Ordered by precedence. List includes all required items, even if already done.
 - [x] Ensure repositories extend `JpaRepository` or `CrudRepository`.
 - [x] Connect application to existing Module 4 database (MySQL or PostgreSQL).
 - [x] Confirm layered architecture flow (Controller -> Service -> Repository).
-- [x] Ensure Java 21 + Spring Boot 3.x stack (JPA, Cache, Validation, AOP).
+- [x] Ensure Java 17 + Spring Boot 3.x stack (JPA, Cache, Validation, AOP).
 
 ## Repository and Query Development
 - [x] Create repository interfaces for `User`, `Product`, `Category`, `Order`, `OrderItem`, and `Review`.
