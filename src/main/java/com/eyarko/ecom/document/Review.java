@@ -29,14 +29,12 @@ public class Review {
     @Indexed
     private Long userId;
 
-    @Indexed
     private Long productId;
 
     private Integer rating;
 
     private String comment;
 
-    @Indexed
     private Instant createdAt;
 
     private Map<String, Object> metadata;
