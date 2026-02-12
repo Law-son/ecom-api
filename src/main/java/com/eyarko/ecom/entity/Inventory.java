@@ -51,7 +51,7 @@ public class Inventory {
     private Instant lastUpdated;
 
     @Version
-    @Column(name = "version", nullable = false)
+    @Column(name = "version", columnDefinition = "bigint default 0")
     private Long version;
 
     /** Keeps inventory_status in sync with quantity on every persist/update (orders, adjust, etc.). */

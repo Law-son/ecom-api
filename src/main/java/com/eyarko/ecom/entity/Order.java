@@ -54,7 +54,7 @@ public class Order {
     private BigDecimal totalAmount;
 
     @Version
-    @Column(name = "version", nullable = false)
+    @Column(name = "version", columnDefinition = "bigint default 0")
     private Long version;
 
     @Builder.Default
