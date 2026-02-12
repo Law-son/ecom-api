@@ -87,7 +87,8 @@ CREATE TABLE inventory (
     product_id BIGINT UNIQUE NOT NULL REFERENCES products(product_id) ON DELETE CASCADE,
     quantity INT NOT NULL DEFAULT 0 CHECK (quantity >= 0),
     inventory_status VARCHAR(50) NOT NULL DEFAULT 'Out of stock',
-    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0
 );
 
 -- =========================
@@ -121,7 +122,8 @@ CREATE TABLE orders (
     user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status order_status NOT NULL DEFAULT 'PENDING',
-    total_amount DECIMAL(12, 2) NOT NULL CHECK (total_amount >= 0)
+    total_amount DECIMAL(12, 2) NOT NULL CHECK (total_amount >= 0),
+    version BIGINT NOT NULL DEFAULT 0
 );
 
 -- =========================

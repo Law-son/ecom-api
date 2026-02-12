@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import lombok.AllArgsConstructor;
 import com.eyarko.ecom.util.InventoryStatusDisplay;
@@ -48,6 +49,10 @@ public class Inventory {
 
     @Column(name = "last_updated", insertable = false, updatable = false)
     private Instant lastUpdated;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 
     /** Keeps inventory_status in sync with quantity on every persist/update (orders, adjust, etc.). */
     @PrePersist
