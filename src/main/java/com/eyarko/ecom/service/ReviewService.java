@@ -59,7 +59,13 @@ public class ReviewService {
             .build();
 
         Review saved = reviewRepository.save(review);
-        updateProductRating(product);
+        try {
+            updateProductRating(product);
+        } catch (RuntimeException ex) {
+            // Compensate cross-store write: remove Mongo review if SQL rating update fails.
+            reviewRepository.deleteById(saved.getId());
+            throw ex;
+        }
         return ReviewMapper.toResponse(saved);
     }
 
