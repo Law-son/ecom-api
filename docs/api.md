@@ -113,10 +113,12 @@ Inventory response fields include:
 - `GET /api/orders/{id}`
 - `PATCH /api/orders/{id}/status`
   - Body: `status` (PENDING, RECEIVED, SHIPPED, DELIVERED, CANCELLED)
-  - Note: `PROCESSING` is not supported by the database enum.
 - `PUT /api/orders/{id}/status`
   - Body: `status` (PENDING, RECEIVED, SHIPPED, DELIVERED, CANCELLED)
-  - Note: `PROCESSING` is not supported by the database enum.
+
+Order status rules:
+- **Terminal statuses:** Once an order is **CANCELLED** (by admin) or **RECEIVED** (by customer), its status cannot be changed again. Any further status update returns 400.
+- **Cancellation:** When an admin sets status to **CANCELLED**, the quantities of all items in that order are returned to inventory (stock goes up per item quantity). Product/inventory caches are evicted.
 
 ### Reviews (MongoDB)
 - `POST /api/reviews`

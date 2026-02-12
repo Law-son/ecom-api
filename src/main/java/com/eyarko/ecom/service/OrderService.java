@@ -137,6 +137,7 @@ public class OrderService {
      * @param request status update payload
      * @return updated order
      */
+    @CacheEvict(value = "products", allEntries = true)
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     public OrderResponse updateOrderStatus(Long id, OrderStatusUpdateRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -150,6 +151,17 @@ public class OrderService {
 
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        // CANCELLED and RECEIVED are terminal: status cannot be changed again.
+        OrderStatus currentStatus = order.getStatus();
+        if (currentStatus == OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Order is cancelled and cannot be changed");
+        }
+        if (currentStatus == OrderStatus.RECEIVED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Order is received and cannot be changed");
+        }
 
         if (!isAdmin) {
             Long orderUserId = order.getUser() != null ? order.getUser().getId() : null;
@@ -166,7 +178,14 @@ public class OrderService {
             }
         }
 
-        order.setStatus(request.getStatus());
+        OrderStatus newStatus = request.getStatus();
+        if (newStatus == OrderStatus.CANCELLED) {
+            // Return quantities to inventory before marking cancelled.
+            if (order.getItems() != null) {
+                order.getItems().forEach(this::restoreInventory);
+            }
+        }
+        order.setStatus(newStatus);
         return OrderMapper.toResponse(orderRepository.save(order));
     }
 
@@ -190,6 +209,17 @@ public class OrderService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient stock");
         }
         inventory.setQuantity(remaining);
+        inventoryRepository.save(inventory);
+    }
+
+    /** Returns item quantity to inventory (e.g. when order is cancelled). */
+    private void restoreInventory(OrderItem item) {
+        if (item == null || item.getProduct() == null) {
+            return;
+        }
+        Inventory inventory = inventoryRepository.findByProduct_Id(item.getProduct().getId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Inventory not found"));
+        inventory.setQuantity(inventory.getQuantity() + item.getQuantity());
         inventoryRepository.save(inventory);
     }
 
