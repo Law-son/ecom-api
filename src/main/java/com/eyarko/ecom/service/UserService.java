@@ -16,6 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -38,6 +39,7 @@ public class UserService {
      * @return created user
      */
     @CacheEvict(value = "users", allEntries = true)
+    @Transactional
     public UserResponse createUser(UserCreateRequest request) {
         if (userRepository.findByEmailIgnoreCase(request.getEmail()).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
@@ -59,6 +61,7 @@ public class UserService {
      * @return user details
      */
     @Cacheable(value = "users", key = "'user:' + #id")
+    @Transactional(readOnly = true)
     public UserResponse getUser(Long id) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
@@ -70,6 +73,7 @@ public class UserService {
      *
      * @return list of users
      */
+    @Transactional(readOnly = true)
     public List<UserResponse> listUsers() {
         return userRepository.findAll().stream()
             .map(UserMapper::toResponse)
@@ -84,6 +88,7 @@ public class UserService {
      * @return updated user
      */
     @CacheEvict(value = "users", allEntries = true)
+    @Transactional
     public UserResponse updateUser(Long id, UserUpdateRequest request) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
@@ -113,6 +118,7 @@ public class UserService {
      * @param id user id
      */
     @CacheEvict(value = "users", allEntries = true)
+    @Transactional
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");

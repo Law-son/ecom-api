@@ -47,6 +47,7 @@ public class ProductService {
      * @return created product
      */
     @CacheEvict(value = "products", allEntries = true)
+    @Transactional
     public ProductResponse createProduct(ProductRequest request) {
         Category category = categoryRepository.findById(request.getCategoryId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
@@ -165,6 +166,7 @@ public class ProductService {
      * @param id product id
      */
     @CacheEvict(value = "products", allEntries = true)
+    @Transactional
     public void deleteProduct(Long id) {
         if (!productRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");

@@ -54,6 +54,7 @@ public class InventoryService {
      * @param productId product id
      * @return inventory details
      */
+    @Transactional(readOnly = true)
     public InventoryResponse getInventoryByProduct(Long productId) {
         if (!productRepository.existsById(productId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");

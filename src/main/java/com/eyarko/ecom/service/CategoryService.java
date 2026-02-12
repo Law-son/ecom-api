@@ -47,6 +47,7 @@ public class CategoryService {
      * @return created category
      */
     @CacheEvict(value = "categories", allEntries = true)
+    @Transactional
     public CategoryResponse createCategory(CategoryRequest request) {
         Category category = Category.builder()
             .name(request.getName())
@@ -62,6 +63,7 @@ public class CategoryService {
      * @return updated category
      */
     @CacheEvict(value = "categories", allEntries = true)
+    @Transactional
     public CategoryResponse updateCategory(Long id, CategoryRequest request) {
         Category category = categoryRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
@@ -76,6 +78,7 @@ public class CategoryService {
      * @return category details
      */
     @Cacheable(value = "categories", key = "'category:' + #id")
+    @Transactional(readOnly = true)
     public CategoryResponse getCategory(Long id) {
         Category category = categoryRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
@@ -88,6 +91,7 @@ public class CategoryService {
      * @return list of categories
      */
     @Cacheable(value = "categories", key = "'all'")
+    @Transactional(readOnly = true)
     public List<CategoryResponse> listCategories() {
         return categoryRepository.findAll(Sort.by("name")).stream()
             .map(CategoryMapper::toResponse)
