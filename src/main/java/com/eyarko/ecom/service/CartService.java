@@ -91,7 +91,6 @@ public class CartService {
         CartItem item = cartItemRepository.findByCart_IdAndProduct_Id(cart.getId(), productId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cart item not found"));
         cart.getItems().remove(item);
-        cartItemRepository.deleteByCart_IdAndProduct_Id(cart.getId(), productId);
         Cart saved = cartRepository.save(cart);
         return CartMapper.toResponse(saved);
     }
