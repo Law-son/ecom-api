@@ -3,6 +3,8 @@ package com.eyarko.ecom.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -11,6 +13,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AllArgsConstructor;
+import com.eyarko.ecom.util.InventoryStatusDisplay;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -45,6 +48,15 @@ public class Inventory {
 
     @Column(name = "last_updated", insertable = false, updatable = false)
     private Instant lastUpdated;
+
+    /** Keeps inventory_status in sync with quantity on every persist/update (orders, adjust, etc.). */
+    @PrePersist
+    @PreUpdate
+    void syncStatusDisplay() {
+        if (quantity != null) {
+            this.statusDisplay = InventoryStatusDisplay.fromQuantity(quantity);
+        }
+    }
 }
 
 
