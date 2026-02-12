@@ -1,41 +1,42 @@
 # Smart E-Commerce API
 
 Base URL (dev): `http://localhost:8080`
+REST API base path: `/api/v1`
 
 ## Security
 
 Authentication uses JWT bearer tokens.
 
-- Log in via `POST /api/auth/login` to receive `accessToken`, `tokenType`, and `expiresAt`.
+- Log in via `POST /api/v1/auth/login` to receive `accessToken`, `tokenType`, and `expiresAt`.
 - Send the token on protected endpoints as `Authorization: Bearer <token>`.
 - Roles: `CUSTOMER`, `ADMIN`.
 
 Public endpoints:
-- `POST /api/auth/login`
-- `POST /api/users`
-- `GET /api/products/**`
-- `GET /api/categories/**`
-- `GET /api/reviews/**`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/users`
+- `GET /api/v1/products/**`
+- `GET /api/v1/categories/**`
+- `GET /api/v1/reviews/**`
 - Swagger/OpenAPI: `/swagger-ui.html`, `/swagger-ui/**`, `/v3/api-docs/**`
 
 Authenticated endpoints:
-- `GET|POST|PATCH|DELETE /api/cart/**`
-- `POST /api/orders`
-- `GET /api/orders/**`
-- `POST /api/reviews`
+- `GET|POST|PATCH|DELETE /api/v1/cart/**`
+- `POST /api/v1/orders`
+- `GET /api/v1/orders/**`
+- `POST /api/v1/reviews`
 - `POST /graphql` (all GraphQL queries/mutations)
 
 Admin-only endpoints:
-- `GET|PUT|DELETE /api/users/**` (user creation is public)
-- `POST|PUT|DELETE /api/products/**`
-- `POST|PUT|DELETE /api/categories/**`
-- `GET|POST /api/inventory/**`
-- `PUT|PATCH /api/orders/{id}/status`
+- `GET|PUT|DELETE /api/v1/users/**` (user creation is public)
+- `POST|PUT|DELETE /api/v1/products/**`
+- `POST|PUT|DELETE /api/v1/categories/**`
+- `GET|POST /api/v1/inventory/**`
+- `PUT|PATCH /api/v1/orders/{id}/status`
 
 ## REST Endpoints
 
 ### Auth
-- `POST /api/auth/login`
+- `POST /api/v1/auth/login`
   - Body:
     - `email` (string, required)
     - `password` (string, required)
@@ -43,35 +44,35 @@ Admin-only endpoints:
   - `data` includes: `id`, `fullName`, `email`, `role`, `lastLogin`, `accessToken`, `tokenType`, `expiresAt`
 
 ### Users
-- `POST /api/users`
+- `POST /api/v1/users`
   - Body: `fullName`, `email`, `password`, `role`
   - Note: `role` is only honored for authenticated admins; otherwise defaults to `CUSTOMER`.
-- `GET /api/users`
-- `GET /api/users/{id}`
-- `PUT /api/users/{id}`
+- `GET /api/v1/users`
+- `GET /api/v1/users/{id}`
+- `PUT /api/v1/users/{id}`
   - Body: any of `fullName`, `email`, `password`, `role`
-- `DELETE /api/users/{id}`
+- `DELETE /api/v1/users/{id}`
 
 ### Categories
-- `POST /api/categories`
+- `POST /api/v1/categories`
   - Body: `name`
-- `GET /api/categories`
-- `GET /api/categories/{id}`
-- `PUT /api/categories/{id}`
+- `GET /api/v1/categories`
+- `GET /api/v1/categories/{id}`
+- `PUT /api/v1/categories/{id}`
   - Body: `name`
-- `DELETE /api/categories/{id}`
+- `DELETE /api/v1/categories/{id}`
 
 ### Products
-- `POST /api/products`
+- `POST /api/v1/products`
   - Body: `categoryId`, `name`, `description`, `price`, `imageUrl`
-- `GET /api/products/all`
+- `GET /api/v1/products/all`
   - Returns all products without pagination
-- `GET /api/products`
+- `GET /api/v1/products`
   - Query: `categoryId`, `search`, `page`, `size`, `sortBy`, `sortDir`
-- `GET /api/products/{id}`
-- `PUT /api/products/{id}`
+- `GET /api/v1/products/{id}`
+- `PUT /api/v1/products/{id}`
   - Body: `categoryId`, `name`, `description`, `price`, `imageUrl`
-- `DELETE /api/products/{id}`
+- `DELETE /api/v1/products/{id}`
 
 Product response fields include:
 - `stockQuantity`: available quantity (null if no inventory row).
@@ -84,36 +85,36 @@ Product response fields include:
   - `"In stock"` (16+)
 
 ### Cart
-- `GET /api/cart`
+- `GET /api/v1/cart`
   - Returns the authenticated user's cart and totals.
-- `POST /api/cart/items`
+- `POST /api/v1/cart/items`
   - Body: `productId`, `quantity`
-- `PATCH /api/cart/items/{productId}`
+- `PATCH /api/v1/cart/items/{productId}`
   - Body: `quantity`
-- `DELETE /api/cart/items/{productId}`
-- `DELETE /api/cart`
+- `DELETE /api/v1/cart/items/{productId}`
+- `DELETE /api/v1/cart`
   - Clears all items from the cart.
 
 ### Inventory
-- `POST /api/inventory/adjust`
+- `POST /api/v1/inventory/adjust`
   - Body: `productId`, `quantity`
-- `GET /api/inventory/{productId}`
+- `GET /api/v1/inventory/{productId}`
 
 Inventory response fields include:
 - `productId`, `quantity`, `lastUpdated`
 - `stockStatus`: same display string as products (see Products above). Use for admin/stock UIs.
 
 ### Orders
-- `POST /api/orders`
+- `POST /api/v1/orders`
   - Body:
     - `userId`
     - `items`: `[{ productId, quantity }]`
-- `GET /api/orders`
+- `GET /api/v1/orders`
   - Query: `userId`, `page`, `size`, `sortBy`, `sortDir`
-- `GET /api/orders/{id}`
-- `PATCH /api/orders/{id}/status`
+- `GET /api/v1/orders/{id}`
+- `PATCH /api/v1/orders/{id}/status`
   - Body: `status` (PENDING, RECEIVED, SHIPPED, DELIVERED, CANCELLED)
-- `PUT /api/orders/{id}/status`
+- `PUT /api/v1/orders/{id}/status`
   - Body: `status` (PENDING, RECEIVED, SHIPPED, DELIVERED, CANCELLED)
 
 Order status rules:
@@ -121,9 +122,9 @@ Order status rules:
 - **Cancellation:** When an admin sets status to **CANCELLED**, the quantities of all items in that order are returned to inventory (stock goes up per item quantity). Product/inventory caches are evicted.
 
 ### Reviews (MongoDB)
-- `POST /api/reviews`
+- `POST /api/v1/reviews`
   - Body: `userId`, `productId`, `rating`, `comment`, `metadata`
-- `GET /api/reviews`
+- `GET /api/v1/reviews`
   - Query: `productId`, `userId`
 
 ### Paged Response Shape

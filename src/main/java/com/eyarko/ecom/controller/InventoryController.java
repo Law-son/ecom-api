@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Inventory endpoints for product stock.
  */
 @RestController
-@RequestMapping("/api/inventory")
+@RequestMapping("/api/v1/inventory")
 public class InventoryController {
     private final InventoryService inventoryService;
 

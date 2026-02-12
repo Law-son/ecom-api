@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Review endpoints for products.
  */
 @RestController
-@RequestMapping("/api/reviews")
+@RequestMapping("/api/v1/reviews")
 public class ReviewController {
     private final ReviewService reviewService;
 

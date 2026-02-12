@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Cart endpoints for authenticated users.
  */
 @RestController
-@RequestMapping("/api/cart")
+@RequestMapping("/api/v1/cart")
 public class CartController {
     private final CartService cartService;
 
