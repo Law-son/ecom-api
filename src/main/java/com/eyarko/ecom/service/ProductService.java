@@ -68,6 +68,7 @@ public class ProductService {
      * @return updated product
      */
     @CacheEvict(value = "products", allEntries = true)
+    @Transactional
     public ProductResponse updateProduct(Long id, ProductRequest request) {
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
