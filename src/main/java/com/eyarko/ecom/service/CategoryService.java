@@ -4,14 +4,19 @@ import com.eyarko.ecom.dto.CategoryRequest;
 import com.eyarko.ecom.dto.CategoryResponse;
 import com.eyarko.ecom.entity.Category;
 import com.eyarko.ecom.mapper.CategoryMapper;
+import com.eyarko.ecom.repository.CartItemRepository;
 import com.eyarko.ecom.repository.CategoryRepository;
+import com.eyarko.ecom.repository.OrderItemRepository;
+import com.eyarko.ecom.repository.ProductRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -20,9 +25,19 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class CategoryService {
     private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
+    private final CartItemRepository cartItemRepository;
+    private final OrderItemRepository orderItemRepository;
 
-    public CategoryService(CategoryRepository categoryRepository) {
+    public CategoryService(
+            CategoryRepository categoryRepository,
+            ProductRepository productRepository,
+            CartItemRepository cartItemRepository,
+            OrderItemRepository orderItemRepository) {
         this.categoryRepository = categoryRepository;
+        this.productRepository = productRepository;
+        this.cartItemRepository = cartItemRepository;
+        this.orderItemRepository = orderItemRepository;
     }
 
     /**
@@ -80,15 +95,25 @@ public class CategoryService {
     }
 
     /**
-     * Deletes a category by id.
+     * Deletes a category by id and all its related products (and their cart/order line items).
      *
      * @param id category id
      */
-    @CacheEvict(value = "categories", allEntries = true)
+    @Transactional
+    @CacheEvict(value = {"categories", "products"}, allEntries = true)
     public void deleteCategory(Long id) {
         if (!categoryRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found");
         }
+        List<Long> productIds = productRepository.findByCategory_Id(id, Pageable.unpaged())
+                .getContent().stream()
+                .map(p -> p.getId())
+                .collect(Collectors.toList());
+        if (!productIds.isEmpty()) {
+            cartItemRepository.deleteByProduct_IdIn(productIds);
+            orderItemRepository.deleteByProduct_IdIn(productIds);
+        }
+        productRepository.deleteByCategory_Id(id);
         categoryRepository.deleteById(id);
     }
 }

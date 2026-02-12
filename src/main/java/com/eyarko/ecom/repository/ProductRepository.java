@@ -60,6 +60,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Page<Product> searchByNameOrCategory(@Param("term") String term, Pageable pageable);
 
     Optional<Product> findByNameIgnoreCase(String name);
+
+    void deleteByCategory_Id(Long categoryId);
 }
 
 
