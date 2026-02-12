@@ -113,7 +113,7 @@ public class OrderService {
     public PagedResponse<OrderResponse> listOrders(Long userId, Pageable pageable) {
         var page = (userId == null)
             ? orderRepository.findAll(pageable)
-            : orderRepository.findOrderHistoryByUserId(userId, pageable);
+            : orderRepository.findByUser_Id(userId, pageable);
         List<OrderResponse> items = page.getContent().stream()
             .map(OrderMapper::toResponse)
             .collect(Collectors.toList());
