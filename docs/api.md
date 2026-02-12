@@ -73,6 +73,16 @@ Admin-only endpoints:
   - Body: `categoryId`, `name`, `description`, `price`, `imageUrl`
 - `DELETE /api/products/{id}`
 
+Product response fields include:
+- `stockQuantity`: available quantity (null if no inventory row).
+- `inStock`: true when stockQuantity > 0.
+- `stockStatus`: display string for UI—use as-is for labels/badges. One of:
+  - `"Out of stock"` (0)
+  - `"1 unit in stock"` (1)
+  - `"N units in stock"` (2–10, e.g. `"5 units in stock"`)
+  - `"Few units in stock"` (11–15)
+  - `"In stock"` (16+)
+
 ### Cart
 - `GET /api/cart`
   - Returns the authenticated user's cart and totals.
@@ -88,6 +98,10 @@ Admin-only endpoints:
 - `POST /api/inventory/adjust`
   - Body: `productId`, `quantity`
 - `GET /api/inventory/{productId}`
+
+Inventory response fields include:
+- `productId`, `quantity`, `lastUpdated`
+- `stockStatus`: same display string as products (see Products above). Use for admin/stock UIs.
 
 ### Orders
 - `POST /api/orders`

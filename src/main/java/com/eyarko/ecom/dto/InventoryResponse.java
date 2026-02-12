@@ -15,6 +15,8 @@ import lombok.Setter;
 public class InventoryResponse {
     private Long productId;
     private Integer quantity;
+    /** Display string for client: "Out of stock", "N unit(s) in stock", "Few units in stock", "In stock". */
+    private String stockStatus;
     private Instant lastUpdated;
 }
 

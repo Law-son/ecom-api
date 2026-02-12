@@ -86,6 +86,7 @@ CREATE TABLE inventory (
     inventory_id BIGSERIAL PRIMARY KEY,
     product_id BIGINT UNIQUE NOT NULL REFERENCES products(product_id) ON DELETE CASCADE,
     quantity INT NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+    inventory_status VARCHAR(50) NOT NULL DEFAULT 'Out of stock',
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

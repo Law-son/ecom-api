@@ -4,6 +4,7 @@ import com.eyarko.ecom.dto.InventoryAdjustRequest;
 import com.eyarko.ecom.dto.InventoryResponse;
 import com.eyarko.ecom.entity.Inventory;
 import com.eyarko.ecom.entity.Product;
+import com.eyarko.ecom.util.InventoryStatusDisplay;
 import com.eyarko.ecom.mapper.InventoryMapper;
 import com.eyarko.ecom.repository.InventoryRepository;
 import com.eyarko.ecom.repository.ProductRepository;
@@ -41,8 +42,9 @@ public class InventoryService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
 
         Inventory inventory = inventoryRepository.findByProduct_Id(product.getId())
-            .orElseGet(() -> Inventory.builder().product(product).build());
+            .orElseGet(() -> Inventory.builder().product(product).quantity(0).statusDisplay("Out of stock").build());
         inventory.setQuantity(request.getQuantity());
+        inventory.setStatusDisplay(InventoryStatusDisplay.fromQuantity(inventory.getQuantity()));
         return InventoryMapper.toResponse(inventoryRepository.save(inventory));
     }
 
@@ -61,6 +63,7 @@ public class InventoryService {
             .orElseGet(() -> InventoryResponse.builder()
                 .productId(productId)
                 .quantity(0)
+                .stockStatus("Out of stock")
                 .lastUpdated(null)
                 .build());
     }

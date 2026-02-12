@@ -16,6 +16,7 @@ public final class InventoryMapper {
         return InventoryResponse.builder()
             .productId(product != null ? product.getId() : null)
             .quantity(inventory.getQuantity())
+            .stockStatus(inventory.getStatusDisplay())
             .lastUpdated(inventory.getLastUpdated())
             .build();
     }

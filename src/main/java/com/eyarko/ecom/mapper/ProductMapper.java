@@ -3,6 +3,7 @@ package com.eyarko.ecom.mapper;
 import com.eyarko.ecom.dto.ProductResponse;
 import com.eyarko.ecom.entity.Category;
 import com.eyarko.ecom.entity.Product;
+import com.eyarko.ecom.util.InventoryStatusDisplay;
 
 public final class ProductMapper {
     private ProductMapper() {
@@ -17,7 +18,8 @@ public final class ProductMapper {
             return null;
         }
         Category category = product.getCategory();
-        boolean inStock = stockQuantity != null && stockQuantity > 0;
+        int qty = stockQuantity != null ? stockQuantity : 0;
+        boolean inStock = qty > 0;
         return ProductResponse.builder()
             .id(product.getId())
             .categoryId(category != null ? category.getId() : null)
@@ -31,6 +33,7 @@ public final class ProductMapper {
             .createdAt(product.getCreatedAt())
             .stockQuantity(stockQuantity)
             .inStock(inStock)
+            .stockStatus(InventoryStatusDisplay.fromQuantity(qty))
             .build();
     }
 }

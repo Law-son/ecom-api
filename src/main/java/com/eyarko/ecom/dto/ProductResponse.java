@@ -28,6 +28,8 @@ public class ProductResponse {
     private Integer stockQuantity;
     /** True when stockQuantity != null and stockQuantity > 0. */
     private Boolean inStock;
+    /** Display string for client: "Out of stock", "N unit(s) in stock", "Few units in stock", "In stock". */
+    private String stockStatus;
 }
 
 

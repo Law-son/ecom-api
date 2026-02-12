@@ -39,6 +39,10 @@ public class Inventory {
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
+    /** Display string: "Out of stock", "N unit(s) in stock", "Few units in stock", "In stock". */
+    @Column(name = "inventory_status", nullable = false, length = 50)
+    private String statusDisplay;
+
     @Column(name = "last_updated", insertable = false, updatable = false)
     private Instant lastUpdated;
 }
