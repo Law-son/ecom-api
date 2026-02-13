@@ -19,10 +19,10 @@ This report compares REST and GraphQL performance for key operations:
 ## Results (Fill With Local Measurements)
 | Operation | Baseline REST Avg (ms) | Optimized REST Avg (ms) | Baseline GraphQL Avg (ms) | Optimized GraphQL Avg (ms) | Notes |
 | --- | --- | --- | --- | --- | --- |
-| List products | TBD | TBD | TBD | TBD | Pagination + search + sorting |
-| Product by ID | TBD | TBD | TBD | TBD | Includes inventory lookup |
-| Create order | TBD | TBD | TBD | TBD | Transactional inventory updates |
-| Add review | TBD | TBD | TBD | TBD | Mongo write |
+| List products | 66.40 | 9.46 | 115.63 | 22.50 | Pagination + search + sorting |
+| Product by ID | 27.38 | 7.11 | 71.01 | 20.34 | Includes inventory lookup |
+| Create order | 205.95 | 32.12 | 189.73 | 29.81 | Transactional inventory updates; optimized run used stock-safe iteration count |
+| Add review | 672.89 | 479.49 | 636.95 | 490.54 | Mongo write |
 
 ## Index Validation Results (EXPLAIN ANALYZE)
 Paste the most relevant query plan lines here, especially the index usage and

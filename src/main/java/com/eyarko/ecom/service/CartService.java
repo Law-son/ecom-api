@@ -41,7 +41,6 @@ public class CartService {
         this.userRepository = userRepository;
     }
 
-    // Not read-only because this method may create a cart row when none exists.
     @Transactional
     public CartResponse getCart() {
         Long userId = SecurityUtil.requireCurrentUserId();
