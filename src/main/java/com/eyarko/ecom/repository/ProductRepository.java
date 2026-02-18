@@ -62,6 +62,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @EntityGraph(attributePaths = {"category"})
     Optional<Product> findByNameIgnoreCase(String name);
 
+    boolean existsByCategory_Id(Long categoryId);
+
     void deleteByCategory_Id(Long categoryId);
 }
 

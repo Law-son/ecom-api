@@ -61,6 +61,7 @@ Admin-only endpoints:
 - `PUT /api/v1/categories/{id}`
   - Body: `name`
 - `DELETE /api/v1/categories/{id}`
+  - Returns `409 Conflict` if the category has linked products.
 
 ### Products
 - `POST /api/v1/products`
@@ -73,6 +74,7 @@ Admin-only endpoints:
 - `PUT /api/v1/products/{id}`
   - Body: `categoryId`, `name`, `description`, `price`, `imageUrl`
 - `DELETE /api/v1/products/{id}`
+  - Returns `409 Conflict` if the product is linked to carts, orders, or inventory.
 
 Product response fields include:
 - `stockQuantity`: available quantity (null if no inventory row).
