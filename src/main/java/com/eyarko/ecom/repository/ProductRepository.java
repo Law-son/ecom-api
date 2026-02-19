@@ -1,7 +1,6 @@
 package com.eyarko.ecom.repository;
 
 import com.eyarko.ecom.entity.Product;
-import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,13 +16,11 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
     @EntityGraph(attributePaths = {"category"})
-    List<Product> findAll();
-
-    @EntityGraph(attributePaths = {"category"})
     Optional<Product> findById(Long id);
 
     @EntityGraph(attributePaths = {"category"})
-    Page<Product> findAll(Pageable pageable);
+    @Query("select p from Product p")
+    Page<Product> findAllProducts(Pageable pageable);
 
     @EntityGraph(attributePaths = {"category"})
     Page<Product> findByCategory_Id(Long categoryId, Pageable pageable);
@@ -61,6 +58,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @EntityGraph(attributePaths = {"category"})
     Optional<Product> findByNameIgnoreCase(String name);
+
+    boolean existsByCategory_Id(Long categoryId);
 
     void deleteByCategory_Id(Long categoryId);
 }

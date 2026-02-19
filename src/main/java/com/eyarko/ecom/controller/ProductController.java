@@ -7,7 +7,6 @@ import com.eyarko.ecom.dto.ProductResponse;
 import com.eyarko.ecom.service.ProductService;
 import com.eyarko.ecom.util.ResponseUtil;
 import jakarta.validation.Valid;
-import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -71,13 +70,23 @@ public class ProductController {
     }
 
     /**
-     * Lists all products without pagination.
+     * Lists all products with pagination.
      *
-     * @return list of all products
+     * @param page page index
+     * @param size page size
+     * @param sortBy field to sort by
+     * @param sortDir sort direction
+     * @return paged list of products
      */
     @GetMapping("/all")
-    public ApiResponse<List<ProductResponse>> listAllProducts() {
-        return ResponseUtil.success("Products retrieved", productService.listAllProducts());
+    public ApiResponse<PagedResponse<ProductResponse>> listAllProducts(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "100") int size,
+        @RequestParam(defaultValue = "name") String sortBy,
+        @RequestParam(defaultValue = "asc") String sortDir
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(parseDirection(sortDir), mapSortField(sortBy)));
+        return ResponseUtil.success("Products retrieved", productService.listProducts(null, null, pageable));
     }
 
     /**

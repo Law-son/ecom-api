@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -48,6 +49,10 @@ public class User {
 
     @Column(name = "last_login")
     private Instant lastLogin;
+
+    @Version
+    @Column(name = "version", columnDefinition = "bigint default 0")
+    private Long version;
 }
 
 

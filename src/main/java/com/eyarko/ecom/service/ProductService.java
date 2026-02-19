@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -46,7 +47,7 @@ public class ProductService {
      * @param request product payload
      * @return created product
      */
-    @CacheEvict(value = "products", allEntries = true)
+    @CacheEvict(value = "productLists", allEntries = true)
     @Transactional
     public ProductResponse createProduct(ProductRequest request) {
         Category category = categoryRepository.findById(request.getCategoryId())
@@ -68,7 +69,10 @@ public class ProductService {
      * @param request product payload
      * @return updated product
      */
-    @CacheEvict(value = "products", allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(value = "productById", key = "#id"),
+        @CacheEvict(value = "productLists", allEntries = true)
+    })
     @Transactional
     public ProductResponse updateProduct(Long id, ProductRequest request) {
         Product product = productRepository.findById(id)
@@ -91,7 +95,7 @@ public class ProductService {
      * @param id product id
      * @return product details
      */
-    @Cacheable(value = "products", key = "'product:' + #id")
+    @Cacheable(value = "productById", key = "#id")
     @Transactional(readOnly = true)
     public ProductResponse getProduct(Long id) {
         Product product = productRepository.findById(id)
@@ -103,22 +107,6 @@ public class ProductService {
     }
 
     /**
-     * Lists all products without pagination.
-     *
-     * @return list of products
-     */
-    @Cacheable(value = "products", key = "'all'")
-    @Transactional(readOnly = true)
-    public List<ProductResponse> listAllProducts() {
-        List<Product> products = productRepository.findAll();
-        List<Long> ids = products.stream().map(Product::getId).collect(Collectors.toList());
-        Map<Long, Integer> quantities = loadQuantities(ids);
-        return products.stream()
-            .map(p -> ProductMapper.toResponse(p, quantities.getOrDefault(p.getId(), 0)))
-            .collect(Collectors.toList());
-    }
-
-    /**
      * Lists products with optional filtering and pagination.
      *
      * @param categoryId optional category filter
@@ -127,7 +115,7 @@ public class ProductService {
      * @return list of products
      */
     @Cacheable(
-        value = "products",
+        value = "productLists",
         key = "'list:' + #categoryId + ':' + #search + ':' + #pageable.pageNumber + ':' + #pageable.pageSize "
             + "+ ':' + #pageable.sort.toString()"
     )
@@ -141,7 +129,7 @@ public class ProductService {
         } else if (search != null && !search.isBlank()) {
             page = productRepository.searchByNameOrCategory(search, pageable);
         } else {
-            page = productRepository.findAll(pageable);
+            page = productRepository.findAllProducts(pageable);
         }
         List<Product> products = page.getContent();
         List<Long> ids = products.stream().map(Product::getId).collect(Collectors.toList());
@@ -165,7 +153,10 @@ public class ProductService {
      *
      * @param id product id
      */
-    @CacheEvict(value = "products", allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(value = "productById", key = "#id"),
+        @CacheEvict(value = "productLists", allEntries = true)
+    })
     @Transactional
     public void deleteProduct(Long id) {
         if (!productRepository.existsById(id)) {

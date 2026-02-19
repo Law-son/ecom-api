@@ -8,7 +8,8 @@ import com.eyarko.ecom.util.InventoryStatusDisplay;
 import com.eyarko.ecom.mapper.InventoryMapper;
 import com.eyarko.ecom.repository.InventoryRepository;
 import com.eyarko.ecom.repository.ProductRepository;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -23,10 +24,16 @@ import org.springframework.web.server.ResponseStatusException;
 public class InventoryService {
     private final InventoryRepository inventoryRepository;
     private final ProductRepository productRepository;
+    private final CacheManager cacheManager;
 
-    public InventoryService(InventoryRepository inventoryRepository, ProductRepository productRepository) {
+    public InventoryService(
+        InventoryRepository inventoryRepository,
+        ProductRepository productRepository,
+        CacheManager cacheManager
+    ) {
         this.inventoryRepository = inventoryRepository;
         this.productRepository = productRepository;
+        this.cacheManager = cacheManager;
     }
 
     /**
@@ -35,7 +42,6 @@ public class InventoryService {
      * @param request inventory adjustment payload
      * @return updated inventory
      */
-    @CacheEvict(value = "products", allEntries = true)
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     public InventoryResponse adjustInventory(InventoryAdjustRequest request) {
         Product product = productRepository.findById(request.getProductId())
@@ -45,7 +51,9 @@ public class InventoryService {
             .orElseGet(() -> Inventory.builder().product(product).quantity(0).statusDisplay("Out of stock").build());
         inventory.setQuantity(request.getQuantity());
         inventory.setStatusDisplay(InventoryStatusDisplay.fromQuantity(inventory.getQuantity()));
-        return InventoryMapper.toResponse(inventoryRepository.save(inventory));
+        Inventory saved = inventoryRepository.save(inventory);
+        evictProductCaches(product.getId());
+        return InventoryMapper.toResponse(saved);
     }
 
     /**
@@ -67,6 +75,17 @@ public class InventoryService {
                 .stockStatus("Out of stock")
                 .lastUpdated(null)
                 .build());
+    }
+
+    private void evictProductCaches(Long productId) {
+        Cache byId = cacheManager.getCache("productById");
+        if (byId != null && productId != null) {
+            byId.evict(productId);
+        }
+        Cache lists = cacheManager.getCache("productLists");
+        if (lists != null) {
+            lists.clear();
+        }
     }
 }
 

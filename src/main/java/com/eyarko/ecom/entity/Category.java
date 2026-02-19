@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -34,6 +35,10 @@ public class Category {
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
+
+    @Version
+    @Column(name = "version", columnDefinition = "bigint default 0")
+    private Long version;
 }
 
 

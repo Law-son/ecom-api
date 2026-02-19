@@ -1,12 +1,15 @@
 package com.eyarko.ecom.controller;
 
 import com.eyarko.ecom.dto.ApiResponse;
+import com.eyarko.ecom.dto.PagedResponse;
 import com.eyarko.ecom.dto.ReviewCreateRequest;
 import com.eyarko.ecom.dto.ReviewResponse;
 import com.eyarko.ecom.service.ReviewService;
 import com.eyarko.ecom.util.ResponseUtil;
 import jakarta.validation.Valid;
-import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -42,14 +45,31 @@ public class ReviewController {
      *
      * @param productId optional product id
      * @param userId optional user id
-     * @return list of reviews
+     * @param page page index
+     * @param size page size
+     * @param sortBy field to sort by
+     * @param sortDir sort direction
+     * @return paged list of reviews
      */
     @GetMapping
-    public ApiResponse<List<ReviewResponse>> listReviews(
+    public ApiResponse<PagedResponse<ReviewResponse>> listReviews(
         @RequestParam(required = false) Long productId,
-        @RequestParam(required = false) Long userId
+        @RequestParam(required = false) Long userId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size,
+        @RequestParam(defaultValue = "createdAt") String sortBy,
+        @RequestParam(defaultValue = "desc") String sortDir
     ) {
-        return ResponseUtil.success("Reviews retrieved", reviewService.listReviews(productId, userId));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(parseDirection(sortDir), sortBy));
+        return ResponseUtil.success("Reviews retrieved", reviewService.listReviews(productId, userId, pageable));
+    }
+
+    private Sort.Direction parseDirection(String sortDir) {
+        try {
+            return Sort.Direction.fromString(sortDir);
+        } catch (IllegalArgumentException ex) {
+            return Sort.Direction.ASC;
+        }
     }
 }
 

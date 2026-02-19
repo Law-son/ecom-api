@@ -14,7 +14,8 @@ import com.eyarko.ecom.entity.User;
 import com.eyarko.ecom.mapper.OrderMapper;
 import com.eyarko.ecom.repository.InventoryRepository;
 import com.eyarko.ecom.security.UserPrincipal;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import com.eyarko.ecom.repository.OrderRepository;
@@ -40,17 +41,20 @@ public class OrderService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final InventoryRepository inventoryRepository;
+    private final CacheManager cacheManager;
 
     public OrderService(
         OrderRepository orderRepository,
         UserRepository userRepository,
         ProductRepository productRepository,
-        InventoryRepository inventoryRepository
+        InventoryRepository inventoryRepository,
+        CacheManager cacheManager
     ) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.inventoryRepository = inventoryRepository;
+        this.cacheManager = cacheManager;
     }
 
     /**
@@ -59,7 +63,6 @@ public class OrderService {
      * @param request order payload
      * @return created order
      */
-    @CacheEvict(value = "products", allEntries = true)
     @Transactional(
         propagation = Propagation.REQUIRED,
         isolation = Isolation.READ_COMMITTED,
@@ -85,6 +88,7 @@ public class OrderService {
         order.setTotalAmount(calculateTotal(items));
 
         items.forEach(this::reserveInventory);
+        evictProductCaches(items);
 
         return OrderMapper.toResponse(orderRepository.save(order));
     }
@@ -112,7 +116,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public PagedResponse<OrderResponse> listOrders(Long userId, Pageable pageable) {
         var page = (userId == null)
-            ? orderRepository.findAll(pageable)
+            ? orderRepository.findAllOrders(pageable)
             : orderRepository.findByUser_Id(userId, pageable);
         List<OrderResponse> items = page.getContent().stream()
             .map(OrderMapper::toResponse)
@@ -137,7 +141,6 @@ public class OrderService {
      * @param request status update payload
      * @return updated order
      */
-    @CacheEvict(value = "products", allEntries = true)
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     public OrderResponse updateOrderStatus(Long id, OrderStatusUpdateRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -186,6 +189,7 @@ public class OrderService {
             }
         }
         order.setStatus(newStatus);
+        evictProductCaches(order.getItems());
         return OrderMapper.toResponse(orderRepository.save(order));
     }
 
@@ -227,6 +231,20 @@ public class OrderService {
         return items.stream()
             .map(item -> item.getPriceAtTime().multiply(BigDecimal.valueOf(item.getQuantity())))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private void evictProductCaches(List<OrderItem> items) {
+        Cache byId = cacheManager.getCache("productById");
+        Cache lists = cacheManager.getCache("productLists");
+        if (items != null && byId != null) {
+            items.stream()
+                .map(item -> item.getProduct() != null ? item.getProduct().getId() : null)
+                .filter(id -> id != null)
+                .forEach(byId::evict);
+        }
+        if (lists != null) {
+            lists.clear();
+        }
     }
 }
 
