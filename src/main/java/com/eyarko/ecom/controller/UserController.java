@@ -1,13 +1,16 @@
 package com.eyarko.ecom.controller;
 
 import com.eyarko.ecom.dto.ApiResponse;
+import com.eyarko.ecom.dto.PagedResponse;
 import com.eyarko.ecom.dto.UserCreateRequest;
 import com.eyarko.ecom.dto.UserResponse;
 import com.eyarko.ecom.dto.UserUpdateRequest;
 import com.eyarko.ecom.service.UserService;
 import com.eyarko.ecom.util.ResponseUtil;
 import jakarta.validation.Valid;
-import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -67,13 +71,31 @@ public class UserController {
     }
 
     /**
-     * Lists all users.
+     * Lists users with pagination.
      *
-     * @return list of users
+     * @param page page index
+     * @param size page size
+     * @param sortBy field to sort by
+     * @param sortDir sort direction
+     * @return paged list of users
      */
     @GetMapping
-    public ApiResponse<List<UserResponse>> listUsers() {
-        return ResponseUtil.success("Users retrieved", userService.listUsers());
+    public ApiResponse<PagedResponse<UserResponse>> listUsers(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size,
+        @RequestParam(defaultValue = "createdAt") String sortBy,
+        @RequestParam(defaultValue = "desc") String sortDir
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(parseDirection(sortDir), sortBy));
+        return ResponseUtil.success("Users retrieved", userService.listUsers(pageable));
+    }
+
+    private Sort.Direction parseDirection(String sortDir) {
+        try {
+            return Sort.Direction.fromString(sortDir);
+        } catch (IllegalArgumentException ex) {
+            return Sort.Direction.ASC;
+        }
     }
 
     /**

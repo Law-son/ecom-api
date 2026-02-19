@@ -48,6 +48,7 @@ Admin-only endpoints:
   - Body: `fullName`, `email`, `password`, `role`
   - Note: `role` is only honored for authenticated admins; otherwise defaults to `CUSTOMER`.
 - `GET /api/v1/users`
+-  - Query: `page`, `size`, `sortBy`, `sortDir`
 - `GET /api/v1/users/{id}`
 - `PUT /api/v1/users/{id}`
   - Body: any of `fullName`, `email`, `password`, `role`
@@ -67,7 +68,7 @@ Admin-only endpoints:
 - `POST /api/v1/products`
   - Body: `categoryId`, `name`, `description`, `price`, `imageUrl`
 - `GET /api/v1/products/all`
-  - Returns all products without pagination
+  - Query: `page`, `size`, `sortBy`, `sortDir`
 - `GET /api/v1/products`
   - Query: `categoryId`, `search`, `page`, `size`, `sortBy`, `sortDir`
 - `GET /api/v1/products/{id}`
@@ -127,7 +128,7 @@ Order status rules:
 - `POST /api/v1/reviews`
   - Body: `userId`, `productId`, `rating`, `comment`, `metadata`
 - `GET /api/v1/reviews`
-  - Query: `productId`, `userId`
+  - Query: `productId`, `userId`, `page`, `size`, `sortBy`, `sortDir`
 
 ### Paged Response Shape
 Paged endpoints return:
