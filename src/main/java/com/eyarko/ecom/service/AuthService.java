@@ -5,7 +5,8 @@ import com.eyarko.ecom.entity.User;
 import com.eyarko.ecom.repository.UserRepository;
 import com.eyarko.ecom.security.JwtService;
 import java.time.Instant;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,11 +20,18 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final CacheManager cacheManager;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(
+        UserRepository userRepository,
+        PasswordEncoder passwordEncoder,
+        JwtService jwtService,
+        CacheManager cacheManager
+    ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.cacheManager = cacheManager;
     }
 
     /**
@@ -32,7 +40,6 @@ public class AuthService {
      * @param request login payload
      * @return JWT token only; client decodes payload for user details
      */
-    @CacheEvict(value = "users", allEntries = true)
     public String login(LoginRequest request) {
         User user = userRepository.findByEmailIgnoreCase(request.getEmail())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
@@ -43,7 +50,15 @@ public class AuthService {
 
         user.setLastLogin(Instant.now());
         userRepository.save(user);
+        evictUserCache(user.getId());
         return jwtService.generateToken(user);
+    }
+
+    private void evictUserCache(Long userId) {
+        Cache cache = cacheManager.getCache("userById");
+        if (cache != null && userId != null) {
+            cache.evict(userId);
+        }
     }
 }
 

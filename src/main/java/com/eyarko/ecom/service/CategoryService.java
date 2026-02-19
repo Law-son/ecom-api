@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,7 @@ public class CategoryService {
      * @param request category payload
      * @return created category
      */
-    @CacheEvict(value = "categories", allEntries = true)
+    @CacheEvict(value = "categoryLists", key = "'all'")
     @Transactional
     public CategoryResponse createCategory(CategoryRequest request) {
         Category category = Category.builder()
@@ -53,7 +54,10 @@ public class CategoryService {
      * @param request category payload
      * @return updated category
      */
-    @CacheEvict(value = "categories", allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(value = "categoryById", key = "#id"),
+        @CacheEvict(value = "categoryLists", key = "'all'")
+    })
     @Transactional
     public CategoryResponse updateCategory(Long id, CategoryRequest request) {
         Category category = categoryRepository.findById(id)
@@ -68,7 +72,7 @@ public class CategoryService {
      * @param id category id
      * @return category details
      */
-    @Cacheable(value = "categories", key = "'category:' + #id")
+    @Cacheable(value = "categoryById", key = "#id")
     @Transactional(readOnly = true)
     public CategoryResponse getCategory(Long id) {
         Category category = categoryRepository.findById(id)
@@ -81,7 +85,7 @@ public class CategoryService {
      *
      * @return list of categories
      */
-    @Cacheable(value = "categories", key = "'all'")
+    @Cacheable(value = "categoryLists", key = "'all'")
     @Transactional(readOnly = true)
     public List<CategoryResponse> listCategories() {
         return categoryRepository.findAllCategories(Sort.by("name")).stream()
@@ -95,7 +99,10 @@ public class CategoryService {
      * @param id category id
      */
     @Transactional
-    @CacheEvict(value = {"categories", "products"}, allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(value = "categoryById", key = "#id"),
+        @CacheEvict(value = "categoryLists", key = "'all'")
+    })
     public void deleteCategory(Long id) {
         if (!categoryRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found");

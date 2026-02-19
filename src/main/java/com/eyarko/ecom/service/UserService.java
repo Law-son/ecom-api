@@ -41,7 +41,6 @@ public class UserService {
      * @param request user payload
      * @return created user
      */
-    @CacheEvict(value = "users", allEntries = true)
     @Transactional
     public UserResponse createUser(UserCreateRequest request) {
         if (userRepository.findByEmailIgnoreCase(request.getEmail()).isPresent()) {
@@ -63,7 +62,7 @@ public class UserService {
      * @param id user id
      * @return user details
      */
-    @Cacheable(value = "users", key = "'user:' + #id")
+    @Cacheable(value = "userById", key = "#id")
     @Transactional(readOnly = true)
     public UserResponse getUser(Long id) {
         User user = userRepository.findById(id)
@@ -101,7 +100,7 @@ public class UserService {
      * @param request user payload
      * @return updated user
      */
-    @CacheEvict(value = "users", allEntries = true)
+    @CacheEvict(value = "userById", key = "#id")
     @Transactional
     public UserResponse updateUser(Long id, UserUpdateRequest request) {
         User user = userRepository.findById(id)
@@ -131,7 +130,7 @@ public class UserService {
      *
      * @param id user id
      */
-    @CacheEvict(value = "users", allEntries = true)
+    @CacheEvict(value = "userById", key = "#id")
     @Transactional
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
