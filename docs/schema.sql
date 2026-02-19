@@ -49,7 +49,8 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     role user_role NOT NULL DEFAULT 'CUSTOMER',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_login TIMESTAMP
+    last_login TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0
 );
 
 -- =========================
@@ -59,7 +60,8 @@ CREATE TABLE users (
 CREATE TABLE categories (
     category_id BIGSERIAL PRIMARY KEY,
     category_name VARCHAR(50) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0
 );
 
 -- =========================
@@ -75,7 +77,8 @@ CREATE TABLE products (
     image_url TEXT,
     avg_rating DECIMAL(3, 2) DEFAULT 0,
     review_count INT DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0
 );
 
 -- =========================
@@ -99,7 +102,8 @@ CREATE TABLE carts (
     cart_id BIGSERIAL PRIMARY KEY,
     user_id BIGINT UNIQUE NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE cart_items (
@@ -110,6 +114,7 @@ CREATE TABLE cart_items (
     unit_price DECIMAL(10, 2) NOT NULL CHECK (unit_price >= 0),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0,
     UNIQUE (cart_id, product_id)
 );
 
@@ -136,7 +141,8 @@ CREATE TABLE order_items (
     product_id BIGINT NOT NULL REFERENCES products(product_id),
     quantity INT NOT NULL CHECK (quantity > 0),
     unit_price DECIMAL(10, 2) NOT NULL CHECK (unit_price >= 0),
-    price_at_time DECIMAL(10, 2) NOT NULL CHECK (price_at_time >= 0)
+    price_at_time DECIMAL(10, 2) NOT NULL CHECK (price_at_time >= 0),
+    version BIGINT NOT NULL DEFAULT 0
 );
 
 -- =========================
