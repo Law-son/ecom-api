@@ -1,6 +1,7 @@
 package com.eyarko.ecom.service;
 
 import com.eyarko.ecom.document.Review;
+import com.eyarko.ecom.dto.PagedResponse;
 import com.eyarko.ecom.dto.ReviewCreateRequest;
 import com.eyarko.ecom.dto.ReviewResponse;
 import com.eyarko.ecom.entity.Product;
@@ -13,6 +14,8 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -74,18 +77,30 @@ public class ReviewService {
      *
      * @param productId optional product id
      * @param userId optional user id
-     * @return list of reviews
+     * @param pageable paging and sorting options
+     * @return paged list of reviews
      */
-    public List<ReviewResponse> listReviews(Long productId, Long userId) {
-        List<Review> reviews;
+    public PagedResponse<ReviewResponse> listReviews(Long productId, Long userId, Pageable pageable) {
+        Page<Review> page;
         if (productId != null) {
-            reviews = reviewRepository.findByProductId(productId);
+            page = reviewRepository.findByProductId(productId, pageable);
         } else if (userId != null) {
-            reviews = reviewRepository.findByUserId(userId);
+            page = reviewRepository.findByUserId(userId, pageable);
         } else {
-            reviews = reviewRepository.findAll();
+            page = reviewRepository.findAllReviews(pageable);
         }
-        return reviews.stream().map(ReviewMapper::toResponse).collect(Collectors.toList());
+        List<ReviewResponse> items = page.getContent().stream()
+            .map(ReviewMapper::toResponse)
+            .collect(Collectors.toList());
+        return PagedResponse.<ReviewResponse>builder()
+            .items(items)
+            .page(page.getNumber())
+            .size(page.getSize())
+            .totalElements(page.getTotalElements())
+            .totalPages(page.getTotalPages())
+            .hasNext(page.hasNext())
+            .hasPrevious(page.hasPrevious())
+            .build();
     }
 
     private void updateProductRating(Product product) {

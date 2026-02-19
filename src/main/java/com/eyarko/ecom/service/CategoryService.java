@@ -84,7 +84,7 @@ public class CategoryService {
     @Cacheable(value = "categories", key = "'all'")
     @Transactional(readOnly = true)
     public List<CategoryResponse> listCategories() {
-        return categoryRepository.findAll(Sort.by("name")).stream()
+        return categoryRepository.findAllCategories(Sort.by("name")).stream()
             .map(CategoryMapper::toResponse)
             .collect(Collectors.toList());
     }

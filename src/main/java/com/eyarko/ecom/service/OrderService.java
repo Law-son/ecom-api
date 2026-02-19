@@ -112,7 +112,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public PagedResponse<OrderResponse> listOrders(Long userId, Pageable pageable) {
         var page = (userId == null)
-            ? orderRepository.findAll(pageable)
+            ? orderRepository.findAllOrders(pageable)
             : orderRepository.findByUser_Id(userId, pageable);
         List<OrderResponse> items = page.getContent().stream()
             .map(OrderMapper::toResponse)

@@ -103,22 +103,6 @@ public class ProductService {
     }
 
     /**
-     * Lists all products without pagination.
-     *
-     * @return list of products
-     */
-    @Cacheable(value = "products", key = "'all'")
-    @Transactional(readOnly = true)
-    public List<ProductResponse> listAllProducts() {
-        List<Product> products = productRepository.findAll();
-        List<Long> ids = products.stream().map(Product::getId).collect(Collectors.toList());
-        Map<Long, Integer> quantities = loadQuantities(ids);
-        return products.stream()
-            .map(p -> ProductMapper.toResponse(p, quantities.getOrDefault(p.getId(), 0)))
-            .collect(Collectors.toList());
-    }
-
-    /**
      * Lists products with optional filtering and pagination.
      *
      * @param categoryId optional category filter
@@ -141,7 +125,7 @@ public class ProductService {
         } else if (search != null && !search.isBlank()) {
             page = productRepository.searchByNameOrCategory(search, pageable);
         } else {
-            page = productRepository.findAll(pageable);
+            page = productRepository.findAllProducts(pageable);
         }
         List<Product> products = page.getContent();
         List<Long> ids = products.stream().map(Product::getId).collect(Collectors.toList());

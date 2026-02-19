@@ -1,5 +1,6 @@
 package com.eyarko.ecom.service;
 
+import com.eyarko.ecom.dto.PagedResponse;
 import com.eyarko.ecom.dto.UserCreateRequest;
 import com.eyarko.ecom.dto.UserResponse;
 import com.eyarko.ecom.dto.UserUpdateRequest;
@@ -11,6 +12,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -69,15 +72,26 @@ public class UserService {
     }
 
     /**
-     * Lists all users.
+     * Lists users with pagination.
      *
-     * @return list of users
+     * @param pageable paging and sorting options
+     * @return paged list of users
      */
     @Transactional(readOnly = true)
-    public List<UserResponse> listUsers() {
-        return userRepository.findAll().stream()
+    public PagedResponse<UserResponse> listUsers(Pageable pageable) {
+        Page<User> page = userRepository.findAllUsers(pageable);
+        List<UserResponse> items = page.getContent().stream()
             .map(UserMapper::toResponse)
             .collect(Collectors.toList());
+        return PagedResponse.<UserResponse>builder()
+            .items(items)
+            .page(page.getNumber())
+            .size(page.getSize())
+            .totalElements(page.getTotalElements())
+            .totalPages(page.getTotalPages())
+            .hasNext(page.hasNext())
+            .hasPrevious(page.hasPrevious())
+            .build();
     }
 
     /**
