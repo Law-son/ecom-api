@@ -18,12 +18,26 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * Spring Security configuration defining access policies for all endpoints.
+ * <p>
+ * Endpoints are categorized as:
+ * <ul>
+ *   <li>Public: No authentication required (login, registration, catalog browsing)</li>
+ *   <li>Authenticated: Requires valid JWT token (customer operations)</li>
+ *   <li>Admin: Requires ADMIN role (management operations)</li>
+ * </ul>
+ */
 @Configuration
 @EnableMethodSecurity
 @EnableConfigurationProperties(JwtProperties.class)
 public class SecurityConfig {
+    /**
+     * Public endpoints that require no authentication.
+     * Includes authentication endpoints (login) and user registration.
+     */
     private static final String[] PUBLIC_ENDPOINTS = {
-        "/api/v1/auth/login",
+        "/api/v1/auth/login",  // Login endpoint
         "/swagger-ui.html",
         "/swagger-ui/**",
         "/v3/api-docs/**",
@@ -33,10 +47,37 @@ public class SecurityConfig {
         "/graphiql/**"
     };
 
+    /**
+     * Public GET endpoints for catalog browsing.
+     * Products, categories, and reviews can be viewed without authentication.
+     */
     private static final String[] PUBLIC_GET_ENDPOINTS = {
         "/api/v1/products/**",
         "/api/v1/categories/**",
         "/api/v1/reviews/**"
+    };
+
+    /**
+     * User registration endpoint (POST only).
+     * Registration is public to allow new users to create accounts.
+     */
+    private static final String USER_REGISTRATION_ENDPOINT = "/api/v1/users";
+
+    /**
+     * Authenticated endpoints requiring valid JWT token.
+     * These endpoints are accessible to both CUSTOMER and ADMIN roles.
+     */
+    private static final String[] AUTHENTICATED_ENDPOINTS = {
+        "/api/v1/cart/**",      // Cart operations
+        "/graphql"              // GraphQL queries/mutations
+    };
+
+    /**
+     * Admin-only endpoints requiring ADMIN role.
+     * These endpoints are restricted to administrative operations.
+     */
+    private static final String[] ADMIN_ENDPOINTS = {
+        "/api/v1/inventory/**"  // Inventory management
     };
 
     @Bean
@@ -59,29 +100,33 @@ public class SecurityConfig {
                 .authenticationEntryPoint(authenticationEntryPoint)
                 .accessDeniedHandler(accessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
+                // Public endpoints: login, registration, catalog browsing
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                 .requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINTS).permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
+                .requestMatchers(HttpMethod.POST, USER_REGISTRATION_ENDPOINT).permitAll()
 
-                .requestMatchers("/api/v1/cart/**").authenticated()
-                .requestMatchers("/graphql").authenticated()
+                // Authenticated endpoints: require valid JWT (CUSTOMER or ADMIN)
+                .requestMatchers(AUTHENTICATED_ENDPOINTS).authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/orders").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/v1/orders/**").authenticated()
+                .requestMatchers(HttpMethod.PATCH, "/api/v1/orders/*/status").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/v1/orders/*/status").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/reviews").authenticated()
 
-                .requestMatchers("/api/v1/inventory/**").hasRole("ADMIN")
+                // Admin-only endpoints: require ADMIN role
+                .requestMatchers(ADMIN_ENDPOINTS).hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/products/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/v1/products/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/categories/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/v1/categories/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/categories/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PATCH, "/api/v1/orders/*/status").authenticated()
-                .requestMatchers(HttpMethod.PUT, "/api/v1/orders/*/status").authenticated()
                 .requestMatchers(HttpMethod.PATCH, "/api/v1/orders/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/v1/orders/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/v1/orders").authenticated()
-                .requestMatchers(HttpMethod.GET, "/api/v1/orders/**").authenticated()
-                .requestMatchers(HttpMethod.POST, "/api/v1/reviews").authenticated()
-                .requestMatchers("/api/v1/users").hasRole("ADMIN")
-                .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, USER_REGISTRATION_ENDPOINT).hasRole("ADMIN")
+                .requestMatchers(USER_REGISTRATION_ENDPOINT + "/**").hasRole("ADMIN")
+
+                // Default: deny all other requests
                 .anyRequest().denyAll()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
