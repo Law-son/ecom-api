@@ -173,3 +173,14 @@ INSERT INTO categories (category_name) VALUES
 INSERT INTO users (full_name, email, password_hash, role) VALUES
 ('Admin User', 'admin@example.com', 'qwerty@12345', 'ADMIN'),
 ('John Doe', 'john@example.com', 'qwerty@12345', 'CUSTOMER');
+
+-- =========================
+-- ALTER TABLES (Add version columns for optimistic locking)
+-- =========================
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE carts ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
