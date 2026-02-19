@@ -22,6 +22,23 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 @EnableConfigurationProperties(JwtProperties.class)
 public class SecurityConfig {
+    private static final String[] PUBLIC_ENDPOINTS = {
+        "/api/v1/auth/login",
+        "/swagger-ui.html",
+        "/swagger-ui/**",
+        "/v3/api-docs/**",
+        "/actuator/health",
+        "/actuator/info",
+        "/graphiql",
+        "/graphiql/**"
+    };
+
+    private static final String[] PUBLIC_GET_ENDPOINTS = {
+        "/api/v1/products/**",
+        "/api/v1/categories/**",
+        "/api/v1/reviews/**"
+    };
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -42,17 +59,13 @@ public class SecurityConfig {
                 .authenticationEntryPoint(authenticationEntryPoint)
                 .accessDeniedHandler(accessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/auth/login").permitAll()
+                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                .requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINTS).permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
-                .requestMatchers("/api/v1/users").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
+
                 .requestMatchers("/api/v1/cart/**").authenticated()
-                .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                .requestMatchers("/graphiql", "/graphiql/**").permitAll()
                 .requestMatchers("/graphql").authenticated()
+
                 .requestMatchers("/api/v1/inventory/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/products/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/v1/products/**").hasRole("ADMIN")
@@ -67,8 +80,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/orders").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/v1/orders/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/v1/reviews").authenticated()
+                .requestMatchers("/api/v1/users").hasRole("ADMIN")
                 .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
-                .anyRequest().authenticated()
+                .anyRequest().denyAll()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .httpBasic(AbstractHttpConfigurer::disable)
