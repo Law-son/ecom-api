@@ -10,12 +10,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
@@ -27,6 +29,28 @@ import org.springframework.web.cors.CorsConfigurationSource;
  *   <li>Authenticated: Requires valid JWT token (customer operations)</li>
  *   <li>Admin: Requires ADMIN role (management operations)</li>
  * </ul>
+ * <p>
+ * <b>CSRF Protection:</b>
+ * <ul>
+ *   <li>CSRF is <b>disabled</b> for stateless JWT-based API endpoints</li>
+ *   <li>This is appropriate because:
+ *     <ul>
+ *       <li>JWT tokens are sent in Authorization headers (not cookies)</li>
+ *       <li>API is stateless (no server-side sessions)</li>
+ *       <li>Same-origin policy and CORS protect against CSRF attacks</li>
+ *     </ul>
+ *   </li>
+ *   <li>CSRF <b>should be enabled</b> for:
+ *     <ul>
+ *       <li>Stateful session-based authentication (cookies)</li>
+ *       <li>HTML form submissions (application/x-www-form-urlencoded)</li>
+ *       <li>Browser-based applications using session cookies</li>
+ *     </ul>
+ *   </li>
+ * </ul>
+ * <p>
+ * A demonstration form endpoint with CSRF enabled is available at `/api/v1/demo/form-submit`
+ * to show how CSRF protection works with form submissions.
  */
 @Configuration
 @EnableMethodSecurity
@@ -110,6 +134,9 @@ public class SecurityConfig {
         CorsConfigurationSource corsConfigurationSource
     ) throws Exception {
         http
+            // CSRF is disabled for stateless JWT APIs
+            // JWT tokens in Authorization headers are not vulnerable to CSRF attacks
+            // CORS configuration provides cross-origin protection
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -148,6 +175,53 @@ public class SecurityConfig {
                 .anyRequest().denyAll()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .httpBasic(AbstractHttpConfigurer::disable)
+            .formLogin(AbstractHttpConfigurer::disable);
+
+        return http.build();
+    }
+
+    /**
+     * Security filter chain for form endpoints with CSRF protection enabled.
+     * <p>
+     * This filter chain demonstrates CSRF protection for form-based endpoints.
+     * CSRF is enabled here to show how it works with form submissions.
+     * <p>
+     * This configuration uses:
+     * <ul>
+     *   <li>Stateful sessions (for CSRF token storage)</li>
+     *   <li>CSRF protection enabled</li>
+     *   <li>Form-based authentication disabled (we use JWT for API)</li>
+     * </ul>
+     * <p>
+     * Order is set to 2 (lower priority) so the main JWT filter chain (order 1) takes precedence.
+     *
+     * @param http HTTP security configuration
+     * @return security filter chain with CSRF enabled
+     * @throws Exception if configuration fails
+     */
+    @Bean
+    @Order(2)
+    public SecurityFilterChain formSecurityFilterChain(HttpSecurity http) throws Exception {
+        // CSRF token request attribute handler for modern browsers
+        CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
+        requestHandler.setCsrfRequestAttributeName("_csrf");
+
+        http
+            .securityMatcher("/api/v1/demo/**")  // Only apply to demo endpoints
+            .csrf(csrf -> {
+                csrf.csrfTokenRequestHandler(requestHandler);
+                org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository tokenRepository = 
+                    new org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository();
+                tokenRepository.setHeaderName("X-CSRF-TOKEN");
+                csrf.csrfTokenRepository(tokenRepository);
+            })
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)  // Create session for CSRF token
+            )
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/v1/demo/**").permitAll()  // Public demo endpoints
+            )
             .httpBasic(AbstractHttpConfigurer::disable)
             .formLogin(AbstractHttpConfigurer::disable);
 
