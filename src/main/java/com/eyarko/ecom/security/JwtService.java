@@ -36,6 +36,14 @@ import org.springframework.stereotype.Service;
  * <p>
  * Signature Algorithm: HMAC SHA-256 (HS256)
  * <p>
+ * <b>Token Validation with Hashing:</b>
+ * <ul>
+ *   <li>JWT tokens are signed using HMAC SHA-256 (cryptographic hash function)</li>
+ *   <li>Signature verification uses the same secret key to validate token integrity</li>
+ *   <li>Any tampering with token payload invalidates the signature</li>
+ *   <li>Token blacklist uses SHA-256 hashing for secure token storage</li>
+ * </ul>
+ * <p>
  * To decode tokens for testing:
  * <ul>
  *   <li>Use jwt.io or Postman's JWT decoder</li>

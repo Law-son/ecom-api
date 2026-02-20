@@ -69,20 +69,33 @@ public class AuthController {
     }
 
     /**
-     * Logs out the current user by revoking all refresh tokens.
+     * Logs out the current user by revoking all refresh tokens and blacklisting the access token.
      * <p>
-     * Requires authentication. All refresh tokens for the authenticated user are revoked,
-     * effectively logging them out from all devices.
+     * Requires authentication. This endpoint:
+     * <ul>
+     *   <li>Revokes all refresh tokens for the authenticated user</li>
+     *   <li>Blacklists the current access token (prevents reuse)</li>
+     *   <li>Effectively logs the user out from all devices</li>
+     * </ul>
      *
+     * @param request HTTP request (contains Authorization header with access token)
      * @return success response
      */
     @PostMapping("/logout")
-    public ApiResponse<Void> logout() {
+    public ApiResponse<Void> logout(jakarta.servlet.http.HttpServletRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal) {
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
             String email = userPrincipal.getEmail();
-            authService.logout(email);
+            
+            // Extract access token from Authorization header
+            String authHeader = request.getHeader("Authorization");
+            String accessToken = null;
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                accessToken = authHeader.substring(7);
+            }
+            
+            authService.logout(email, accessToken);
         }
         return ResponseUtil.success("Logout successful", null);
     }

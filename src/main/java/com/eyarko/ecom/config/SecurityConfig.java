@@ -110,15 +110,27 @@ public class SecurityConfig {
     /**
      * Password encoder using BCrypt hashing algorithm.
      * <p>
+     * <b>Password Security with Hashing:</b>
+     * <ul>
+     *   <li>Passwords are hashed using BCrypt before storage (never stored in plain text)</li>
+     *   <li>BCrypt uses adaptive hashing with salt generation</li>
+     *   <li>Work factor (default 10) makes brute-force attacks computationally expensive</li>
+     *   <li>Each password hash includes a unique salt, preventing rainbow table attacks</li>
+     * </ul>
+     * <p>
      * BCrypt is used for:
      * <ul>
      *   <li>Storing password hashes in the database (never plain text)</li>
-     *   <li>Verifying passwords during authentication</li>
+     *   <li>Verifying passwords during authentication (matches plain text against hash)</li>
      *   <li>Encoding passwords when users register or update their password</li>
      * </ul>
      * <p>
-     * BCrypt automatically handles salt generation and uses a work factor
-     * (default 10) to make brute-force attacks computationally expensive.
+     * <b>Security Features:</b>
+     * <ul>
+     *   <li>One-way hashing: passwords cannot be reversed from hashes</li>
+     *   <li>Salt per password: prevents rainbow table attacks</li>
+     *   <li>Adaptive cost: can increase work factor as hardware improves</li>
+     * </ul>
      *
      * @return BCrypt password encoder instance
      */
