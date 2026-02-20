@@ -6,7 +6,10 @@ import com.eyarko.ecom.entity.RefreshToken;
 import com.eyarko.ecom.entity.User;
 import com.eyarko.ecom.repository.UserRepository;
 import com.eyarko.ecom.security.JwtService;
+import com.eyarko.ecom.security.SecurityEventLogger;
+import com.eyarko.ecom.security.SecurityMetricsService;
 import com.eyarko.ecom.security.TokenBlacklistService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
@@ -26,6 +29,8 @@ public class AuthService {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final TokenBlacklistService tokenBlacklistService;
+    private final SecurityEventLogger securityEventLogger;
+    private final SecurityMetricsService securityMetricsService;
     private final CacheManager cacheManager;
 
     public AuthService(
@@ -34,6 +39,8 @@ public class AuthService {
         JwtService jwtService,
         RefreshTokenService refreshTokenService,
         TokenBlacklistService tokenBlacklistService,
+        SecurityEventLogger securityEventLogger,
+        SecurityMetricsService securityMetricsService,
         CacheManager cacheManager
     ) {
         this.userRepository = userRepository;
@@ -41,6 +48,8 @@ public class AuthService {
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
         this.tokenBlacklistService = tokenBlacklistService;
+        this.securityEventLogger = securityEventLogger;
+        this.securityMetricsService = securityMetricsService;
         this.cacheManager = cacheManager;
     }
 
@@ -48,34 +57,60 @@ public class AuthService {
      * Authenticates a user by email and password.
      * <p>
      * Returns both access token (short-lived) and refresh token (long-lived).
+     * Logs authentication success or failure events for security monitoring.
      *
      * @param request login payload
+     * @param httpRequest HTTP request (for IP address and user agent)
      * @return authentication response with access and refresh tokens
      */
     @Transactional
-    public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmailIgnoreCase(request.getEmail())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
+    public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
+        String ipAddress = SecurityEventLogger.getClientIpAddress(httpRequest);
+        String userAgent = SecurityEventLogger.getUserAgent(httpRequest);
+        
+        try {
+            User user = userRepository.findByEmailIgnoreCase(request.getEmail())
+                .orElseThrow(() -> {
+                    securityEventLogger.logAuthenticationFailure(
+                        request.getEmail(), ipAddress, userAgent, "User not found"
+                    );
+                    securityMetricsService.recordFailedLogin(request.getEmail(), ipAddress);
+                    return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+                });
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+            if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+                securityEventLogger.logAuthenticationFailure(
+                    request.getEmail(), ipAddress, userAgent, "Invalid password"
+                );
+                securityMetricsService.recordFailedLogin(request.getEmail(), ipAddress);
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+            }
+            
+            // Record successful login and reset failed attempts
+            securityMetricsService.recordSuccessfulLogin(ipAddress);
+
+            user.setLastLogin(Instant.now());
+            userRepository.save(user);
+            evictUserCache(user.getId());
+
+            // Generate access token
+            String accessToken = jwtService.generateToken(user);
+
+            // Generate refresh token
+            RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+
+            // Log successful authentication
+            securityEventLogger.logAuthenticationSuccess(user.getEmail(), ipAddress, userAgent);
+
+            return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken.getToken())
+                .tokenType("Bearer")
+                .build();
+        } catch (ResponseStatusException ex) {
+            // Re-throw after logging
+            throw ex;
         }
-
-        user.setLastLogin(Instant.now());
-        userRepository.save(user);
-        evictUserCache(user.getId());
-
-        // Generate access token
-        String accessToken = jwtService.generateToken(user);
-
-        // Generate refresh token
-        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
-
-        return AuthResponse.builder()
-            .accessToken(accessToken)
-            .refreshToken(refreshToken.getToken())
-            .tokenType("Bearer")
-            .build();
     }
 
     /**
@@ -110,13 +145,15 @@ public class AuthService {
      *   <li>Revokes all refresh tokens for the user</li>
      *   <li>Blacklists the current access token (if provided)</li>
      *   <li>Evicts user cache</li>
+     *   <li>Logs logout event</li>
      * </ul>
      *
      * @param email user email
      * @param accessToken current access token to blacklist (optional)
+     * @param httpRequest HTTP request (for IP address)
      */
     @Transactional
-    public void logout(String email, String accessToken) {
+    public void logout(String email, String accessToken, HttpServletRequest httpRequest) {
         User user = userRepository.findByEmailIgnoreCase(email)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         refreshTokenService.revokeAllUserTokens(user.getId());
@@ -131,6 +168,10 @@ public class AuthService {
             }
         }
         
+        // Log logout event
+        String ipAddress = SecurityEventLogger.getClientIpAddress(httpRequest);
+        securityEventLogger.logLogout(email, ipAddress);
+        
         evictUserCache(user.getId());
     }
     
@@ -138,11 +179,13 @@ public class AuthService {
      * Logs out a user by revoking all refresh tokens (without access token).
      *
      * @param email user email
+     * @param httpRequest HTTP request (for IP address)
      */
     @Transactional
-    public void logout(String email) {
-        logout(email, null);
+    public void logout(String email, HttpServletRequest httpRequest) {
+        logout(email, null, httpRequest);
     }
+    
 
     private void evictUserCache(Long userId) {
         Cache cache = cacheManager.getCache("userById");

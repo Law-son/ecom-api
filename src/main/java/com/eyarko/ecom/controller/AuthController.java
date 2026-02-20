@@ -50,8 +50,11 @@ public class AuthController {
      * @return success response with AuthResponse containing accessToken and refreshToken
      */
     @PostMapping("/login")
-    public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseUtil.success("Login successful", authService.login(request));
+    public ApiResponse<AuthResponse> login(
+        @Valid @RequestBody LoginRequest request,
+        jakarta.servlet.http.HttpServletRequest httpRequest
+    ) {
+        return ResponseUtil.success("Login successful", authService.login(request, httpRequest));
     }
 
     /**
@@ -95,7 +98,7 @@ public class AuthController {
                 accessToken = authHeader.substring(7);
             }
             
-            authService.logout(email, accessToken);
+            authService.logout(email, accessToken, request);
         }
         return ResponseUtil.success("Logout successful", null);
     }
