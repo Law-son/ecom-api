@@ -32,7 +32,7 @@ Authentication uses JWT bearer tokens signed with HMAC SHA-256.
 
 ### Testing JWT Tokens in Postman
 
-1. **Login to get a token:**
+1. **Login to get tokens:**
    ```
    POST http://localhost:8080/api/v1/auth/login
    Body (JSON):
@@ -41,9 +41,21 @@ Authentication uses JWT bearer tokens signed with HMAC SHA-256.
      "password": "password123"
    }
    ```
-   Response will contain the JWT token in the `data` field.
+   Response will contain both `accessToken` and `refreshToken` in the `data` field.
+   - Use `accessToken` for API requests (short-lived, expires in 60 minutes)
+   - Store `refreshToken` securely (long-lived, expires in 7 days)
 
-2. **Decode token to view claims:**
+2. **Refresh access token:**
+   ```
+   POST http://localhost:8080/api/v1/auth/refresh
+   Body (JSON):
+   {
+     "refreshToken": "<your-refresh-token>"
+   }
+   ```
+   Returns new `accessToken` and `refreshToken`. Old refresh token is revoked.
+
+3. **Decode token to view claims:**
    - Copy the token from the login response
    - Use Postman's built-in JWT decoder:
      - Go to Authorization tab → Type: Bearer Token
@@ -53,17 +65,25 @@ Authentication uses JWT bearer tokens signed with HMAC SHA-256.
      - View decoded payload (claims) in the "Decoded" section
      - Note: Signature verification requires the secret key
 
-3. **Use token in protected requests:**
+4. **Use access token in protected requests:**
    ```
    Authorization: Bearer <your-token-here>
    ```
 
-4. **Test token expiration:**
+5. **Test token expiration:**
    - Wait for token to expire (default: 60 minutes)
    - Make a request with expired token
    - Verify `401 Unauthorized` response with "Token expired" message
 
-5. **Test tampered token:**
+6. **Test tampered token:**
+
+7. **Logout:**
+   ```
+   POST http://localhost:8080/api/v1/auth/logout
+   Headers:
+   Authorization: Bearer <access-token>
+   ```
+   Revokes all refresh tokens for the authenticated user.
    - Modify any character in the token
    - Make a request with tampered token
    - Verify `401 Unauthorized` response with "Invalid token signature" message
@@ -98,7 +118,22 @@ Admin-only endpoints:
     - `email` (string, required)
     - `password` (string, required)
   - Response: `{ status, message, data }`
-  - `data` includes: `id`, `fullName`, `email`, `role`, `lastLogin`, `accessToken`, `tokenType`, `expiresAt`
+  - `data` is an `AuthResponse` object containing:
+    - `accessToken` (string): Short-lived JWT token (default: 60 minutes)
+    - `refreshToken` (string): Long-lived refresh token (default: 7 days)
+    - `tokenType` (string): Always "Bearer"
+
+- `POST /api/v1/auth/refresh`
+  - Body:
+    - `refreshToken` (string, required)
+  - Response: `{ status, message, data }`
+  - `data` is an `AuthResponse` object with new `accessToken` and `refreshToken`
+  - Note: Refresh token is rotated (old one is revoked, new one is issued)
+
+- `POST /api/v1/auth/logout`
+  - Requires authentication (Bearer token)
+  - Response: `{ status, message, data }`
+  - Revokes all refresh tokens for the authenticated user
 
 ### Users
 - `POST /api/v1/users`

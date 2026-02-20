@@ -34,10 +34,11 @@ import org.springframework.web.cors.CorsConfigurationSource;
 public class SecurityConfig {
     /**
      * Public endpoints that require no authentication.
-     * Includes authentication endpoints (login) and user registration.
+     * Includes authentication endpoints (login, refresh) and user registration.
      */
     private static final String[] PUBLIC_ENDPOINTS = {
-        "/api/v1/auth/login",  // Login endpoint
+        "/api/v1/auth/login",   // Login endpoint
+        "/api/v1/auth/refresh",  // Refresh token endpoint
         "/swagger-ui.html",
         "/swagger-ui/**",
         "/v3/api-docs/**",
@@ -123,6 +124,7 @@ public class SecurityConfig {
 
                 // Authenticated endpoints: require valid JWT (CUSTOMER or ADMIN)
                 .requestMatchers(AUTHENTICATED_ENDPOINTS).authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").authenticated()  // Logout endpoint
                 .requestMatchers(HttpMethod.POST, "/api/v1/orders").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/v1/orders/**").authenticated()
                 .requestMatchers(HttpMethod.PATCH, "/api/v1/orders/*/status").authenticated()
