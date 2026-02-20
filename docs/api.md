@@ -5,11 +5,68 @@ REST API base path: `/api/v1`
 
 ## Security
 
-Authentication uses JWT bearer tokens.
+Authentication uses JWT bearer tokens signed with HMAC SHA-256.
 
-- Log in via `POST /api/v1/auth/login` to receive `accessToken`, `tokenType`, and `expiresAt`.
+- Log in via `POST /api/v1/auth/login` to receive a JWT token.
 - Send the token on protected endpoints as `Authorization: Bearer <token>`.
 - Roles: `CUSTOMER`, `ADMIN`.
+
+### JWT Token Details
+
+**Token Claims:**
+- `sub` (subject): User email address
+- `iat` (issued at): Token creation timestamp
+- `exp` (expiration): Token expiration timestamp
+- `userId`: User ID
+- `role`: User role (CUSTOMER, ADMIN)
+- `fullName`: User's full name
+- `lastLogin`: Last login timestamp
+
+**Signature Algorithm:** HMAC SHA-256 (HS256)
+
+**Token Validation:**
+- Tokens are validated on each protected request
+- Tampered tokens are rejected with `401 Unauthorized` and message "Invalid token signature"
+- Expired tokens are rejected with `401 Unauthorized` and message "Token expired"
+- Invalid token format returns `401 Unauthorized` with message "Invalid or expired token"
+
+### Testing JWT Tokens in Postman
+
+1. **Login to get a token:**
+   ```
+   POST http://localhost:8080/api/v1/auth/login
+   Body (JSON):
+   {
+     "email": "user@example.com",
+     "password": "password123"
+   }
+   ```
+   Response will contain the JWT token in the `data` field.
+
+2. **Decode token to view claims:**
+   - Copy the token from the login response
+   - Use Postman's built-in JWT decoder:
+     - Go to Authorization tab → Type: Bearer Token
+     - Paste token → Click "Preview" to see decoded claims
+   - Or use jwt.io:
+     - Paste token in the "Encoded" section
+     - View decoded payload (claims) in the "Decoded" section
+     - Note: Signature verification requires the secret key
+
+3. **Use token in protected requests:**
+   ```
+   Authorization: Bearer <your-token-here>
+   ```
+
+4. **Test token expiration:**
+   - Wait for token to expire (default: 60 minutes)
+   - Make a request with expired token
+   - Verify `401 Unauthorized` response with "Token expired" message
+
+5. **Test tampered token:**
+   - Modify any character in the token
+   - Make a request with tampered token
+   - Verify `401 Unauthorized` response with "Invalid token signature" message
 
 Public endpoints:
 - `POST /api/v1/auth/login`

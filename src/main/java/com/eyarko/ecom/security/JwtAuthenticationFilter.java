@@ -2,7 +2,9 @@ package com.eyarko.ecom.security;
 
 import com.eyarko.ecom.dto.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,6 +21,25 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+/**
+ * JWT authentication filter that validates tokens on each protected request.
+ * <p>
+ * This filter:
+ * <ul>
+ *   <li>Extracts JWT token from Authorization header (Bearer token)</li>
+ *   <li>Validates token signature using HMAC SHA-256</li>
+ *   <li>Checks token expiration</li>
+ *   <li>Rejects tampered or expired tokens with 401 Unauthorized</li>
+ *   <li>Sets authentication context for valid tokens</li>
+ * </ul>
+ * <p>
+ * Error responses:
+ * <ul>
+ *   <li>Expired token: "Token expired"</li>
+ *   <li>Tampered/invalid token: "Invalid or expired token"</li>
+ *   <li>Missing token: Request continues (may be handled by authorization rules)</li>
+ * </ul>
+ */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
@@ -62,18 +83,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             }
+        } catch (ExpiredJwtException ex) {
+            // Token expired - return 401 Unauthorized
+            sendErrorResponse(response, "Token expired", HttpStatus.UNAUTHORIZED);
+            return;
+        } catch (SignatureException ex) {
+            // Token tampered - return 401 Unauthorized
+            sendErrorResponse(response, "Invalid token signature", HttpStatus.UNAUTHORIZED);
+            return;
         } catch (JwtException | IllegalArgumentException ex) {
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            ApiResponse<Void> payload = ApiResponse.<Void>builder()
-                .status("error")
-                .message("Invalid or expired token")
-                .build();
-            objectMapper.writeValue(response.getOutputStream(), payload);
+            // Invalid token format or other JWT error - return 401 Unauthorized
+            sendErrorResponse(response, "Invalid or expired token", HttpStatus.UNAUTHORIZED);
             return;
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void sendErrorResponse(HttpServletResponse response, String message, HttpStatus status) throws IOException {
+        response.setStatus(status.value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        ApiResponse<Void> payload = ApiResponse.<Void>builder()
+            .status("error")
+            .message(message)
+            .build();
+        objectMapper.writeValue(response.getOutputStream(), payload);
     }
 }
 
