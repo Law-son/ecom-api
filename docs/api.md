@@ -11,6 +11,23 @@ Authentication uses JWT bearer tokens signed with HMAC SHA-256.
 - Send the token on protected endpoints as `Authorization: Bearer <token>`.
 - Roles: `CUSTOMER`, `ADMIN`.
 
+### CSRF Protection
+
+**CSRF is DISABLED for stateless JWT APIs** (default configuration):
+- JWT tokens are sent in `Authorization` headers (not cookies)
+- API is stateless (no server-side sessions)
+- Same-origin policy and CORS provide protection against CSRF attacks
+
+**When CSRF should be enabled:**
+- Stateful session-based authentication (cookies)
+- HTML form submissions (`application/x-www-form-urlencoded`)
+- Browser-based applications using session cookies
+
+**CSRF Demonstration Endpoints:**
+- `GET /api/v1/demo/csrf-token` - Retrieve CSRF token for form submissions
+- `POST /api/v1/demo/form-submit` - Submit form with CSRF protection (requires CSRF token)
+- See README.md for detailed explanation of CORS vs CSRF interaction and testing instructions
+
 ### JWT Token Details
 
 **Token Claims:**
@@ -231,6 +248,30 @@ Paged endpoints return:
 - `totalPages`: total pages
 - `hasNext`: boolean
 - `hasPrevious`: boolean
+
+## Demo Endpoints (CSRF Demonstration)
+
+These endpoints demonstrate CSRF protection for form submissions.
+
+### CSRF Token
+- `GET /api/v1/demo/csrf-token`
+  - Returns CSRF token for form submissions
+  - Response: `{ status, message, data }` where `data` contains the CSRF token
+  
+### Form Submission
+- `POST /api/v1/demo/form-submit`
+  - Form submission endpoint with CSRF protection enabled
+  - Headers: `X-CSRF-TOKEN: <csrf-token>` (required)
+  - Body (form-urlencoded): `message=<optional-message>`
+  - Response: `{ status, message, data }`
+  - Without CSRF token: `403 Forbidden`
+  - With valid CSRF token: `200 OK`
+
+**Testing Instructions:**
+1. First, GET `/api/v1/demo/csrf-token` to retrieve the token
+2. Include token in POST request as header `X-CSRF-TOKEN: <token>`
+3. Without the token, request will be rejected with `403 Forbidden`
+4. See README.md for detailed CORS vs CSRF explanation
 
 ## GraphQL
 
