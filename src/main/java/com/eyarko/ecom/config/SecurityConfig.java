@@ -2,6 +2,8 @@ package com.eyarko.ecom.config;
 
 import com.eyarko.ecom.security.JwtAuthenticationFilter;
 import com.eyarko.ecom.security.JwtProperties;
+import com.eyarko.ecom.security.CustomOAuth2UserService;
+import com.eyarko.ecom.security.OAuth2AuthenticationSuccessHandler;
 import com.eyarko.ecom.security.RestAccessDeniedHandler;
 import com.eyarko.ecom.security.RestAuthenticationEntryPoint;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -126,6 +128,29 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Order(1)
+    public SecurityFilterChain oauth2SecurityFilterChain(
+        HttpSecurity http,
+        CustomOAuth2UserService customOAuth2UserService,
+        OAuth2AuthenticationSuccessHandler successHandler
+    ) throws Exception {
+        http
+            // Only OAuth2 endpoints (Google login + callback)
+            .securityMatcher("/oauth2/**", "/login/oauth2/**")
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+            .oauth2Login(oauth2 -> oauth2
+                .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                .successHandler(successHandler)
+            )
+            // OAuth2 uses a session for the authorization request; allow session creation when needed.
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+            .httpBasic(AbstractHttpConfigurer::disable);
+
+        return http.build();
+    }
+
+    @Bean
+    @Order(3)
     public SecurityFilterChain securityFilterChain(
         HttpSecurity http,
         JwtAuthenticationFilter jwtAuthenticationFilter,
@@ -159,7 +184,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/reviews").authenticated()
 
                 // Admin-only endpoints: require ADMIN role
-                .requestMatchers(ADMIN_ENDPOINTS).hasRole("ADMIN")
+                .requestMatchers(ADMIN_ENDPOINTS).hasAnyRole("ADMIN", "STAFF")
                 .requestMatchers(HttpMethod.POST, "/api/v1/products/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/v1/products/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**").hasRole("ADMIN")
