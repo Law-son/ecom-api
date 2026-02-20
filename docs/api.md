@@ -9,7 +9,46 @@ Authentication uses JWT bearer tokens signed with HMAC SHA-256.
 
 - Log in via `POST /api/v1/auth/login` to receive a JWT token.
 - Send the token on protected endpoints as `Authorization: Bearer <token>`.
-- Roles: `CUSTOMER`, `ADMIN`.
+- Roles: `CUSTOMER`, `STAFF`, `ADMIN`.
+
+### OAuth2 Login (Google)
+
+OAuth2 login is supported via Google. Once configured with credentials, you can start the flow at:
+- `GET /oauth2/authorization/google`
+
+On success, the backend will:
+- Fetch user profile (name + email) from Google
+- Persist/update the user in SQL (`users` table)
+- Assign an application role based on configured email allowlists
+- Issue `accessToken` + `refreshToken` and redirect to `app.security.oauth2.redirect-uri`
+
+### RBAC Verification (Postman)
+
+Use these Postman checks to verify role-based access once OAuth2 credentials are configured:
+
+1. **Configure role allowlists (env vars or `application.properties`):**
+   - Set `OAUTH2_STAFF_EMAILS` to include your Google email to test STAFF access
+   - Set `OAUTH2_ADMIN_EMAILS` to include an admin Google email to test ADMIN access
+
+2. **Login via Google OAuth2:**
+   - Open `GET /oauth2/authorization/google` in a browser and complete login
+   - Your frontend redirect page should capture `accessToken` from query params
+
+3. **Call an ADMIN/STAFF endpoint (should succeed for STAFF/ADMIN):**
+   - `GET /api/v1/inventory/{productId}`
+   - Header: `Authorization: Bearer <accessToken>`
+   - Expect:
+     - `200 OK` for `STAFF` or `ADMIN`
+     - `403 Forbidden` for `CUSTOMER`
+
+4. **Call an ADMIN-only endpoint (should succeed only for ADMIN):**
+   - `POST /api/v1/products`
+   - Header: `Authorization: Bearer <accessToken>`
+   - Expect:
+     - `200 OK` / `201 Created` for `ADMIN`
+     - `403 Forbidden` for `STAFF`/`CUSTOMER`
+
+Tip: You can decode the JWT token to confirm `role` claim matches the expected role.
 
 ### CSRF Protection
 
