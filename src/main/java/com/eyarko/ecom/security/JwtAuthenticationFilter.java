@@ -44,15 +44,18 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final TokenBlacklistService tokenBlacklistService;
     private final ObjectMapper objectMapper;
 
     public JwtAuthenticationFilter(
         JwtService jwtService,
         UserDetailsService userDetailsService,
+        TokenBlacklistService tokenBlacklistService,
         ObjectMapper objectMapper
     ) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
+        this.tokenBlacklistService = tokenBlacklistService;
         this.objectMapper = objectMapper;
     }
 
@@ -69,6 +72,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String token = authHeader.substring(7);
+        
+        // Check if token is blacklisted (revoked)
+        if (tokenBlacklistService.isTokenBlacklisted(token)) {
+            sendErrorResponse(response, "Token has been revoked", HttpStatus.UNAUTHORIZED);
+            return;
+        }
+        
         try {
             String username = jwtService.extractUsername(token);
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {

@@ -6,6 +6,7 @@ import com.eyarko.ecom.entity.RefreshToken;
 import com.eyarko.ecom.entity.User;
 import com.eyarko.ecom.repository.UserRepository;
 import com.eyarko.ecom.security.JwtService;
+import com.eyarko.ecom.security.TokenBlacklistService;
 import java.time.Instant;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
@@ -24,6 +25,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final TokenBlacklistService tokenBlacklistService;
     private final CacheManager cacheManager;
 
     public AuthService(
@@ -31,12 +33,14 @@ public class AuthService {
         PasswordEncoder passwordEncoder,
         JwtService jwtService,
         RefreshTokenService refreshTokenService,
+        TokenBlacklistService tokenBlacklistService,
         CacheManager cacheManager
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
+        this.tokenBlacklistService = tokenBlacklistService;
         this.cacheManager = cacheManager;
     }
 
@@ -99,16 +103,45 @@ public class AuthService {
     }
 
     /**
-     * Logs out a user by revoking all refresh tokens.
+     * Logs out a user by revoking all refresh tokens and blacklisting the current access token.
+     * <p>
+     * This method:
+     * <ul>
+     *   <li>Revokes all refresh tokens for the user</li>
+     *   <li>Blacklists the current access token (if provided)</li>
+     *   <li>Evicts user cache</li>
+     * </ul>
+     *
+     * @param email user email
+     * @param accessToken current access token to blacklist (optional)
+     */
+    @Transactional
+    public void logout(String email, String accessToken) {
+        User user = userRepository.findByEmailIgnoreCase(email)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        refreshTokenService.revokeAllUserTokens(user.getId());
+        
+        // Blacklist the current access token if provided
+        if (accessToken != null && !accessToken.isEmpty()) {
+            try {
+                Instant expiration = jwtService.extractExpiry(accessToken);
+                tokenBlacklistService.blacklistToken(accessToken, expiration);
+            } catch (Exception ex) {
+                // If token is invalid, ignore (it's already unusable)
+            }
+        }
+        
+        evictUserCache(user.getId());
+    }
+    
+    /**
+     * Logs out a user by revoking all refresh tokens (without access token).
      *
      * @param email user email
      */
     @Transactional
     public void logout(String email) {
-        User user = userRepository.findByEmailIgnoreCase(email)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        refreshTokenService.revokeAllUserTokens(user.getId());
-        evictUserCache(user.getId());
+        logout(email, null);
     }
 
     private void evictUserCache(Long userId) {
