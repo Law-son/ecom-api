@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.security.SignatureException;
+import org.springframework.security.core.Authentication;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,17 +46,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
     private final TokenBlacklistService tokenBlacklistService;
+    private final SecurityEventLogger securityEventLogger;
     private final ObjectMapper objectMapper;
 
     public JwtAuthenticationFilter(
         JwtService jwtService,
         UserDetailsService userDetailsService,
         TokenBlacklistService tokenBlacklistService,
+        SecurityEventLogger securityEventLogger,
         ObjectMapper objectMapper
     ) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
         this.tokenBlacklistService = tokenBlacklistService;
+        this.securityEventLogger = securityEventLogger;
         this.objectMapper = objectMapper;
     }
 
@@ -72,9 +76,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String token = authHeader.substring(7);
+        String ipAddress = SecurityEventLogger.getClientIpAddress(request);
+        String endpoint = request.getRequestURI();
         
         // Check if token is blacklisted (revoked)
         if (tokenBlacklistService.isTokenBlacklisted(token)) {
+            securityEventLogger.logTokenRevoked(ipAddress, endpoint);
             sendErrorResponse(response, "Token has been revoked", HttpStatus.UNAUTHORIZED);
             return;
         }
@@ -91,18 +98,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     );
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                    
+                    // Log successful token validation
+                    securityEventLogger.logTokenValid(username, ipAddress, endpoint);
                 }
             }
         } catch (ExpiredJwtException ex) {
             // Token expired - return 401 Unauthorized
+            securityEventLogger.logTokenExpired(ipAddress, endpoint);
             sendErrorResponse(response, "Token expired", HttpStatus.UNAUTHORIZED);
             return;
         } catch (SignatureException ex) {
             // Token tampered - return 401 Unauthorized
+            securityEventLogger.logTokenInvalid(ipAddress, endpoint, "Invalid signature");
             sendErrorResponse(response, "Invalid token signature", HttpStatus.UNAUTHORIZED);
             return;
         } catch (JwtException | IllegalArgumentException ex) {
             // Invalid token format or other JWT error - return 401 Unauthorized
+            securityEventLogger.logTokenInvalid(ipAddress, endpoint, ex.getMessage());
             sendErrorResponse(response, "Invalid or expired token", HttpStatus.UNAUTHORIZED);
             return;
         }
