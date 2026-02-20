@@ -8,7 +8,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -17,6 +16,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
  * Spring Security configuration defining access policies for all endpoints.
@@ -80,6 +80,21 @@ public class SecurityConfig {
         "/api/v1/inventory/**"  // Inventory management
     };
 
+    /**
+     * Password encoder using BCrypt hashing algorithm.
+     * <p>
+     * BCrypt is used for:
+     * <ul>
+     *   <li>Storing password hashes in the database (never plain text)</li>
+     *   <li>Verifying passwords during authentication</li>
+     *   <li>Encoding passwords when users register or update their password</li>
+     * </ul>
+     * <p>
+     * BCrypt automatically handles salt generation and uses a work factor
+     * (default 10) to make brute-force attacks computationally expensive.
+     *
+     * @return BCrypt password encoder instance
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -90,11 +105,12 @@ public class SecurityConfig {
         HttpSecurity http,
         JwtAuthenticationFilter jwtAuthenticationFilter,
         RestAuthenticationEntryPoint authenticationEntryPoint,
-        RestAccessDeniedHandler accessDeniedHandler
+        RestAccessDeniedHandler accessDeniedHandler,
+        CorsConfigurationSource corsConfigurationSource
     ) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
-            .cors(Customizer.withDefaults())
+            .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint(authenticationEntryPoint)
