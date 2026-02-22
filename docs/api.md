@@ -11,16 +11,94 @@ Authentication uses JWT bearer tokens signed with HMAC SHA-256.
 - Send the token on protected endpoints as `Authorization: Bearer <token>`.
 - Roles: `CUSTOMER`, `STAFF`, `ADMIN`.
 
-### OAuth2 Login (Google)
+### OAuth2 Login and Signup (Google)
 
-OAuth2 login is supported via Google. Once configured with credentials, you can start the flow at:
-- `GET /oauth2/authorization/google`
+OAuth2 authentication is supported via Google using Spring Security OAuth2 Client. **OAuth2 login automatically handles both login and signup** - new users are automatically created on their first Google login.
 
-On success, the backend will:
-- Fetch user profile (name + email) from Google
-- Persist/update the user in SQL (`users` table)
-- Assign an application role based on configured email allowlists
-- Issue `accessToken` + `refreshToken` and redirect to `app.security.oauth2.redirect-uri`
+#### Key Features
+
+- **Automatic Signup**: New users are automatically created when they log in with Google for the first time
+- **Account Linking**: Uses email as the unique identifier, linking OAuth2 and email/password accounts
+- **Seamless Integration**: Works perfectly with email/password authentication (see Account Linking section below)
+
+#### Google Cloud Console Configuration
+
+When setting up OAuth2 credentials in Google Cloud Console, configure:
+
+**Authorized JavaScript Origins:**
+- Development: `http://localhost:8080`
+- Production: `https://your-production-domain.com`
+
+**Authorized Redirect URIs:**
+- Development: `http://localhost:8080/login/oauth2/code/google`
+- Production: `https://your-production-domain.com/login/oauth2/code/google`
+
+**Important:** The redirect URI path `/login/oauth2/code/google` is Spring Security's default OAuth2 callback endpoint and must match exactly.
+
+#### OAuth2 Login/Signup Flow
+
+**Endpoint:** `GET /oauth2/authorization/google`
+
+**Flow:**
+
+1. **Start the login/signup flow:**
+   - Navigate to or request: `GET /oauth2/authorization/google`
+   - User is redirected to Google's consent screen
+
+2. **Google redirects back:**
+   - Google redirects to: `http://localhost:8080/login/oauth2/code/google`
+   - Spring Security handles the OAuth2 callback
+
+3. **User provisioning (automatic signup for new users):**
+   - User profile (name + email) is fetched from Google
+   - **If user exists by email**: Updates `fullName` and `role`, preserves existing password
+   - **If user doesn't exist**: Creates new user account with:
+     - Email from Google
+     - Full name from Google
+     - Role based on email allowlists (ADMIN/STAFF/CUSTOMER)
+     - Random password hash (user can set password later if needed)
+   - User is saved to the database (`users` table)
+
+4. **Token issuance and frontend redirect:**
+   - Access token (JWT) and refresh token are generated
+   - User is redirected to: `OAUTH2_REDIRECT_URI` (default: `http://localhost:5173/oauth2/redirect`)
+   - Tokens are passed as query parameters: `?accessToken=...&refreshToken=...&tokenType=Bearer`
+   - Frontend should extract tokens from URL and store them securely
+
+**Response (via redirect):**
+```
+http://localhost:5173/oauth2/redirect?accessToken=<jwt_token>&refreshToken=<refresh_token>&tokenType=Bearer
+```
+
+#### Account Linking with Email/Password Authentication
+
+OAuth2 and email/password authentication work seamlessly together:
+
+**Scenario 1: OAuth2 First (Signup), Then Email/Password**
+- User signs up via OAuth2 → Account created
+- User can later set a password via `PUT /api/v1/users/{id}` (while authenticated)
+- After setting password, user can use both OAuth2 and email/password login
+
+**Scenario 2: Email/Password First (Signup), Then OAuth2**
+- User registers via `POST /api/v1/users` → Account created
+- User can later log in via OAuth2 with the same email
+- Account is automatically linked (same user record)
+- User can use both authentication methods
+
+**Important Notes:**
+- Email is the unique identifier linking accounts
+- One email = One user account
+- Both authentication methods share the same user record
+- See `docs/AUTHENTICATION_FLOW.md` for detailed scenarios
+
+#### Environment Variables
+
+Configure OAuth2 credentials via environment variables (in `.env` file):
+- `GOOGLE_OAUTH_CLIENT_ID`: Your Google OAuth2 Client ID
+- `GOOGLE_OAUTH_CLIENT_SECRET`: Your Google OAuth2 Client Secret
+- `OAUTH2_REDIRECT_URI`: Frontend redirect URI (default: `http://localhost:5173/oauth2/redirect`)
+- `OAUTH2_ADMIN_EMAILS`: Comma-separated admin emails
+- `OAUTH2_STAFF_EMAILS`: Comma-separated staff emails
 
 ### RBAC Verification (Postman)
 

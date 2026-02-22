@@ -3,36 +3,37 @@ package com.eyarko.ecom.security;
 import com.eyarko.ecom.entity.User;
 import com.eyarko.ecom.entity.UserRole;
 import com.eyarko.ecom.repository.UserRepository;
-import java.util.Map;
 import java.util.UUID;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
-import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
-import org.springframework.security.oauth2.core.OAuth2Error;
-import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Loads a Google OAuth2 user and ensures a corresponding SQL {@link User} exists.
+ * Custom OIDC user service to load and persist user details from OIDC providers (e.g., Google with "openid" scope).
  * <p>
- * We persist the user so the rest of the app can use consistent authorization and auditing.
+ * This service handles OIDC users (when using "openid" scope) and ensures a corresponding SQL {@link User} exists.
+ * It works similarly to {@link CustomOAuth2UserService} but for OIDC flows.
  */
 @Service
-public class CustomOAuth2UserService extends DefaultOAuth2UserService {
-    private static final Logger logger = LoggerFactory.getLogger(CustomOAuth2UserService.class);
+public class CustomOidcUserService extends OidcUserService {
+    private static final Logger logger = LoggerFactory.getLogger(CustomOidcUserService.class);
     
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final OAuth2RoleResolver roleResolver;
     private final CacheManager cacheManager;
 
-    public CustomOAuth2UserService(
+    public CustomOidcUserService(
         UserRepository userRepository,
         PasswordEncoder passwordEncoder,
         OAuth2RoleResolver roleResolver,
@@ -46,15 +47,16 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     @Override
     @Transactional
-    public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
-        OAuth2User oauth2User = super.loadUser(userRequest);
+    public OidcUser loadUser(OidcUserRequest userRequest) throws OAuth2AuthenticationException {
+        OidcUser oidcUser = super.loadUser(userRequest);
 
-        Map<String, Object> attrs = oauth2User.getAttributes();
-        String email = asString(attrs.get("email"));
-        String name = asString(attrs.get("name"));
+        String email = oidcUser.getEmail();
+        String name = oidcUser.getFullName();
 
         if (email == null || email.isBlank()) {
-            throw new OAuth2AuthenticationException(new OAuth2Error("invalid_user"), "Google account has no email");
+            throw new OAuth2AuthenticationException(
+                new org.springframework.security.oauth2.core.OAuth2Error("invalid_user"),
+                "OIDC account has no email");
         }
 
         UserRole resolvedRole = roleResolver.resolveRole(email);
@@ -68,21 +70,21 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 
                 // Store original role from database BEFORE any modifications
                 UserRole originalRole = freshUser.getRole();
-                logger.debug("OAuth2 login - Original role from DB: {} for email: {}", originalRole, email);
+                logger.debug("OIDC login - Original role from DB: {} for email: {}", originalRole, email);
                 
-                // Update full name from OAuth2 provider
+                // Update full name from OIDC provider
                 freshUser.setFullName(name != null && !name.isBlank() ? name : freshUser.getFullName());
                 
                 // Role preservation logic - CRITICAL: Never downgrade existing roles
                 // Only upgrade if email is in allowlists, otherwise preserve original role
                 if (shouldUpgradeRole(originalRole, resolvedRole)) {
                     // Only upgrade: CUSTOMER -> STAFF/ADMIN, or STAFF -> ADMIN
-                    logger.info("OAuth2 role upgrade: {} -> {} for email: {}", originalRole, resolvedRole, email);
+                    logger.info("OIDC role upgrade: {} -> {} for email: {}", originalRole, resolvedRole, email);
                     freshUser.setRole(resolvedRole);
                 } else {
                     // CRITICAL: Preserve original role - never downgrade
                     // This ensures ADMIN/STAFF users never get downgraded to CUSTOMER
-                    logger.info("OAuth2 role preserved: {} (resolved from allowlists: {}) for email: {}", 
+                    logger.info("OIDC role preserved: {} (resolved from allowlists: {}) for email: {}", 
                         originalRole, resolvedRole, email);
                     freshUser.setRole(originalRole); // Explicitly set to original role
                 }
@@ -121,7 +123,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 UserRole persistedRole = persistedUser.getRole();
                 if (!persistedRole.equals(roleToPreserve)) {
                     // Role was not preserved - this should never happen, but fix it
-                    logger.warn("OAuth2 role mismatch detected! Expected: {}, Got: {} for user: {}. Restoring correct role.", 
+                    logger.warn("OIDC role mismatch detected! Expected: {}, Got: {} for user: {}. Restoring correct role.", 
                         roleToPreserve, persistedRole, email);
                     persistedUser.setRole(roleToPreserve);
                     persistedUser = userRepository.saveAndFlush(persistedUser);
@@ -132,17 +134,17 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     }
                     user = persistedUser;
                 } else {
-                    logger.debug("OAuth2 role verified: {} for email: {}", persistedRole, email);
+                    logger.debug("OIDC role verified: {} for email: {}", persistedRole, email);
                 }
             }
         }
 
-        // Preserve authorities via principal mapping used by the app
-        return new UserPrincipalOAuth2User(UserPrincipal.fromUser(user), attrs);
-    }
-
-    private static String asString(Object value) {
-        return value == null ? null : String.valueOf(value);
+        // Return DefaultOidcUser with our user's authorities
+        return new DefaultOidcUser(
+            java.util.List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())),
+            oidcUser.getIdToken(),
+            oidcUser.getUserInfo()
+        );
     }
 
     /**
@@ -179,5 +181,4 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         return false;
     }
 }
-
 
