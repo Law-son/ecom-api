@@ -90,7 +90,13 @@ public class OrderService {
         items.forEach(this::reserveInventory);
         evictProductCaches(items);
 
-        return OrderMapper.toResponse(orderRepository.save(order));
+        Order savedOrder = orderRepository.save(order);
+        // Flush to ensure items are persisted immediately
+        orderRepository.flush();
+        // Reload order with items to ensure they're properly loaded
+        savedOrder = orderRepository.findById(savedOrder.getId())
+            .orElse(savedOrder);
+        return OrderMapper.toResponse(savedOrder);
     }
 
     /**
@@ -103,6 +109,10 @@ public class OrderService {
     public OrderResponse getOrder(Long id) {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        // Ensure items are loaded by accessing them (triggers eager fetch)
+        if (order.getItems() != null) {
+            order.getItems().size(); // Force initialization
+        }
         return OrderMapper.toResponse(order);
     }
 
@@ -118,6 +128,12 @@ public class OrderService {
         var page = (userId == null)
             ? orderRepository.findAllOrders(pageable)
             : orderRepository.findByUser_Id(userId, pageable);
+        // Ensure items are loaded for all orders (triggers eager fetch)
+        page.getContent().forEach(order -> {
+            if (order.getItems() != null) {
+                order.getItems().size(); // Force initialization
+            }
+        });
         List<OrderResponse> items = page.getContent().stream()
             .map(OrderMapper::toResponse)
             .collect(Collectors.toList());
@@ -190,7 +206,12 @@ public class OrderService {
         }
         order.setStatus(newStatus);
         evictProductCaches(order.getItems());
-        return OrderMapper.toResponse(orderRepository.save(order));
+        Order savedOrder = orderRepository.save(order);
+        // Ensure items are loaded by accessing them (triggers eager fetch)
+        if (savedOrder.getItems() != null) {
+            savedOrder.getItems().size(); // Force initialization
+        }
+        return OrderMapper.toResponse(savedOrder);
     }
 
     private OrderItem toOrderItem(Order order, OrderItemRequest request) {
