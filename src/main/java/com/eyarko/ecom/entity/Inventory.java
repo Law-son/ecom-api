@@ -44,7 +44,7 @@ public class Inventory {
     private Integer quantity;
 
     /** Display string: "Out of stock", "N unit(s) in stock", "Few units in stock", "In stock". */
-    @Column(name = "inventory_status", nullable = false, length = 50)
+    @Column(name = "inventory_status", nullable = true, length = 50)
     private String statusDisplay;
 
     @Column(name = "last_updated", insertable = false, updatable = false)
@@ -60,6 +60,8 @@ public class Inventory {
     void syncStatusDisplay() {
         if (quantity != null) {
             this.statusDisplay = InventoryStatusDisplay.fromQuantity(quantity);
+        } else {
+            this.statusDisplay = "Out of stock";
         }
     }
 }
