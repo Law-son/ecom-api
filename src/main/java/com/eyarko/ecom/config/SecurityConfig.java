@@ -3,6 +3,7 @@ package com.eyarko.ecom.config;
 import com.eyarko.ecom.security.JwtAuthenticationFilter;
 import com.eyarko.ecom.security.JwtProperties;
 import com.eyarko.ecom.security.CustomOAuth2UserService;
+import com.eyarko.ecom.security.CustomOidcUserService;
 import com.eyarko.ecom.security.OAuth2AuthenticationSuccessHandler;
 import com.eyarko.ecom.security.RestAccessDeniedHandler;
 import com.eyarko.ecom.security.RestAuthenticationEntryPoint;
@@ -144,19 +145,29 @@ public class SecurityConfig {
     public SecurityFilterChain oauth2SecurityFilterChain(
         HttpSecurity http,
         CustomOAuth2UserService customOAuth2UserService,
-        OAuth2AuthenticationSuccessHandler successHandler
+        CustomOidcUserService customOidcUserService,
+        OAuth2AuthenticationSuccessHandler successHandler,
+        CorsConfigurationSource corsConfigurationSource
     ) throws Exception {
         http
             // Only OAuth2 endpoints (Google login + callback)
             .securityMatcher("/oauth2/**", "/login/oauth2/**")
+            // CSRF must be disabled for OAuth2 login endpoints
+            // OAuth2 uses redirects and state parameters for security instead of CSRF tokens
+            .csrf(AbstractHttpConfigurer::disable)
+            .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
             .oauth2Login(oauth2 -> oauth2
-                .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                .userInfoEndpoint(userInfo -> userInfo
+                    .userService(customOAuth2UserService)  // For standard OAuth2
+                    .oidcUserService(customOidcUserService) // For OIDC (when using "openid" scope)
+                )
                 .successHandler(successHandler)
             )
             // OAuth2 uses a session for the authorization request; allow session creation when needed.
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-            .httpBasic(AbstractHttpConfigurer::disable);
+            .httpBasic(AbstractHttpConfigurer::disable)
+            .formLogin(AbstractHttpConfigurer::disable);
 
         return http.build();
     }

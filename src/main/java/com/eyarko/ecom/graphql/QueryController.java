@@ -94,11 +94,16 @@ public class QueryController {
     /**
      * Lists all users via GraphQL.
      *
+     * @param page page index
+     * @param size page size
      * @return list of users
      */
     @QueryMapping
-    public List<UserResponse> users() {
-        return userService.listUsers();
+    public List<UserResponse> users(@Argument Integer page, @Argument Integer size) {
+        int resolvedPage = page == null ? 0 : page;
+        int resolvedSize = size == null ? 20 : size;
+        Pageable pageable = PageRequest.of(resolvedPage, resolvedSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return userService.listUsers(pageable).getItems();
     }
 
     /**
@@ -121,11 +126,20 @@ public class QueryController {
      * Lists reviews for a product via GraphQL.
      *
      * @param productId product id
+     * @param page page index
+     * @param size page size
      * @return list of reviews
      */
     @QueryMapping
-    public List<ReviewResponse> reviewsByProduct(@Argument Long productId) {
-        return reviewService.listReviews(productId, null);
+    public List<ReviewResponse> reviewsByProduct(
+        @Argument Long productId,
+        @Argument Integer page,
+        @Argument Integer size
+    ) {
+        int resolvedPage = page == null ? 0 : page;
+        int resolvedSize = size == null ? 20 : size;
+        Pageable pageable = PageRequest.of(resolvedPage, resolvedSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return reviewService.listReviews(productId, null, pageable).getItems();
     }
 
     private Sort.Direction parseDirection(String sortDir) {

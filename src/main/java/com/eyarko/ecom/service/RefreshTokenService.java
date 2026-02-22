@@ -61,19 +61,22 @@ public class RefreshTokenService {
      *
      * @param token refresh token string
      * @return refresh token entity if valid
-     * @throws RuntimeException if token is invalid, expired, or revoked
+     * @throws org.springframework.web.server.ResponseStatusException if token is invalid, expired, or revoked
      */
     @Transactional(readOnly = true)
     public RefreshToken validateRefreshToken(String token) {
         RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
-            .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+            .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
 
         if (refreshToken.getRevoked()) {
-            throw new RuntimeException("Refresh token has been revoked");
+            throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.UNAUTHORIZED, "Refresh token has been revoked");
         }
 
         if (refreshToken.getExpiresAt().isBefore(Instant.now())) {
-            throw new RuntimeException("Refresh token has expired");
+            throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.UNAUTHORIZED, "Refresh token has expired");
         }
 
         return refreshToken;

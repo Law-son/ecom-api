@@ -69,6 +69,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         HttpServletResponse response,
         FilterChain filterChain
     ) throws ServletException, IOException {
+        String requestPath = request.getRequestURI();
+        
+        // Skip JWT validation for public endpoints (especially /refresh which doesn't need access token)
+        if (isPublicEndpoint(requestPath)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -104,7 +112,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (ExpiredJwtException ex) {
-            // Token expired - return 401 Unauthorized
+            // Token expired - check if this is a logout endpoint
+            // For logout, we allow expired tokens to pass through so users can still log out
+            if (requestPath.equals("/api/v1/auth/logout")) {
+                // Extract user info from expired token for logout
+                try {
+                    String username = ex.getClaims().getSubject();
+                    if (username != null) {
+                        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                        );
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                        
+                        // Log that we're allowing expired token for logout
+                        securityEventLogger.logTokenExpired(ipAddress, endpoint);
+                        // Continue to logout endpoint
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
+                } catch (Exception e) {
+                    // If we can't extract user info, fall through to error
+                }
+            }
+            
+            // For other endpoints, return 401 Unauthorized
             securityEventLogger.logTokenExpired(ipAddress, endpoint);
             sendErrorResponse(response, "Token expired", HttpStatus.UNAUTHORIZED);
             return;
@@ -131,6 +166,38 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             .message(message)
             .build();
         objectMapper.writeValue(response.getOutputStream(), payload);
+    }
+    
+    /**
+     * Checks if the request path is a public endpoint that should bypass JWT validation.
+     * <p>
+     * This is especially important for the /refresh endpoint, which should work
+     * even when the access token is expired (that's the whole point of refresh tokens).
+     *
+     * @param requestPath The request URI path
+     * @return true if the endpoint is public and should bypass JWT validation
+     */
+    private boolean isPublicEndpoint(String requestPath) {
+        // Public authentication endpoints
+        if (requestPath.equals("/api/v1/auth/login") || 
+            requestPath.equals("/api/v1/auth/refresh")) {
+            return true;
+        }
+        
+        // Swagger/OpenAPI endpoints
+        if (requestPath.startsWith("/swagger-ui") || 
+            requestPath.startsWith("/v3/api-docs") ||
+            requestPath.startsWith("/graphiql")) {
+            return true;
+        }
+        
+        // Actuator health endpoints
+        if (requestPath.equals("/actuator/health") || 
+            requestPath.equals("/actuator/info")) {
+            return true;
+        }
+        
+        return false;
     }
 }
 
