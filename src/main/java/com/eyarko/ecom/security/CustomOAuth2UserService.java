@@ -92,9 +92,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             .orElseGet(() -> User.builder()
                 .email(email)
                 .fullName((name == null || name.isBlank()) ? email : name)
-                // We keep password_hash non-null for DB constraints; OAuth2 users won't use it unless they set a password later.
-                .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
-                .role(resolvedRole)  // New users get role from allowlists
+                .passwordHash(null)  // OAuth2 users have no password
+                .role(resolvedRole)
                 .build());
 
         // Save user and flush to ensure role is persisted immediately
