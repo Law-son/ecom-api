@@ -147,7 +147,8 @@ public class SecurityConfig {
         CustomOAuth2UserService customOAuth2UserService,
         CustomOidcUserService customOidcUserService,
         OAuth2AuthenticationSuccessHandler successHandler,
-        CorsConfigurationSource corsConfigurationSource
+        CorsConfigurationSource corsConfigurationSource,
+        RateLimitFilter rateLimitFilter
     ) throws Exception {
         http
             // Only OAuth2 endpoints (Google login + callback)
@@ -166,6 +167,7 @@ public class SecurityConfig {
             )
             // OAuth2 uses a session for the authorization request; allow session creation when needed.
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+            .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .httpBasic(AbstractHttpConfigurer::disable)
             .formLogin(AbstractHttpConfigurer::disable);
 
@@ -179,7 +181,8 @@ public class SecurityConfig {
         JwtAuthenticationFilter jwtAuthenticationFilter,
         RestAuthenticationEntryPoint authenticationEntryPoint,
         RestAccessDeniedHandler accessDeniedHandler,
-        CorsConfigurationSource corsConfigurationSource
+        CorsConfigurationSource corsConfigurationSource,
+        RateLimitFilter rateLimitFilter
     ) throws Exception {
         http
             // CSRF is disabled for stateless JWT APIs
@@ -222,6 +225,7 @@ public class SecurityConfig {
                 // Default: deny all other requests
                 .anyRequest().denyAll()
             )
+            .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .httpBasic(AbstractHttpConfigurer::disable)
             .formLogin(AbstractHttpConfigurer::disable);
@@ -250,7 +254,7 @@ public class SecurityConfig {
      */
     @Bean
     @Order(2)
-    public SecurityFilterChain formSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain formSecurityFilterChain(HttpSecurity http, RateLimitFilter rateLimitFilter) throws Exception {
         // CSRF token request attribute handler for modern browsers
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
         requestHandler.setCsrfRequestAttributeName("_csrf");
@@ -270,6 +274,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/demo/**").permitAll()  // Public demo endpoints
             )
+            .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .httpBasic(AbstractHttpConfigurer::disable)
             .formLogin(AbstractHttpConfigurer::disable);
 
