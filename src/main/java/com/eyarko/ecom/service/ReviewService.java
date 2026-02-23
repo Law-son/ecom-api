@@ -65,7 +65,6 @@ public class ReviewService {
         try {
             updateProductRating(product);
         } catch (RuntimeException ex) {
-            // Compensate cross-store write: remove Mongo review if SQL rating update fails.
             reviewRepository.deleteById(saved.getId());
             throw ex;
         }

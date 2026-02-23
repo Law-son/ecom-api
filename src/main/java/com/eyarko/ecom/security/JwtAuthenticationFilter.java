@@ -38,7 +38,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * <ul>
  *   <li>Expired token: "Token expired"</li>
  *   <li>Tampered/invalid token: "Invalid or expired token"</li>
- *   <li>Missing token: Request continues (may be handled by authorization rules)</li>
+ *   <li>Missing token: Request continues (maybe handled by authorization rules)</li>
  * </ul>
  */
 @Component
@@ -130,7 +130,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         
                         // Log that we're allowing expired token for logout
                         securityEventLogger.logTokenExpired(ipAddress, endpoint);
-                        // Continue to logout endpoint
+                        // Continue to log out endpoint
                         filterChain.doFilter(request, response);
                         return;
                     }

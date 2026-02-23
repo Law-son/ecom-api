@@ -56,7 +56,7 @@ public class SecurityMetricsService {
      * <p>
      * Tracks attempts per IP address and logs warnings when brute-force thresholds are exceeded.
      *
-     * @param email attempted email (may be null)
+     * @param email attempted email (maybe null)
      * @param ipAddress client IP address
      */
     public void recordFailedLogin(String email, String ipAddress) {

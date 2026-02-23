@@ -153,16 +153,13 @@ public class SecurityConfig {
         http
             // Only OAuth2 endpoints (Google login + callback)
             .securityMatcher("/oauth2/**", "/login/oauth2/**")
-            // CSRF must be disabled for OAuth2 login endpoints
-            // OAuth2 uses redirects and state parameters for security instead of CSRF tokens
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
             .oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo -> userInfo
-                    .userService(customOAuth2UserService)  // For standard OAuth2
-                    .oidcUserService(customOidcUserService) // For OIDC (when using "openid" scope)
-                )
+                    .userService(customOAuth2UserService)
+                    .oidcUserService(customOidcUserService))
                 .successHandler(successHandler)
             )
             // OAuth2 uses a session for the authorization request; allow session creation when needed.

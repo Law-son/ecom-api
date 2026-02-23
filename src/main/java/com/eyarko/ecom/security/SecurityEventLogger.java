@@ -54,7 +54,7 @@ public class SecurityEventLogger {
      * <p>
      * Multiple failures from the same IP/email may indicate brute-force attacks.
      *
-     * @param email attempted email (may be null)
+     * @param email attempted email (maybe null)
      * @param ipAddress client IP address
      * @param userAgent client user agent
      * @param reason failure reason
