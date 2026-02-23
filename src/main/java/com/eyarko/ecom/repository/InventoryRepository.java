@@ -15,9 +15,6 @@ import org.springframework.stereotype.Repository;
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     Optional<Inventory> findByProduct_Id(Long productId);
 
-    @Query("select i from Inventory i where i.product.id in :productIds")
-    List<Inventory> findByProductIds(@Param("productIds") List<Long> productIds);
-
     @Query(
         value = "SELECT product_id AS productId, quantity AS quantity FROM inventory WHERE product_id IN (:productIds)",
         nativeQuery = true

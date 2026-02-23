@@ -106,56 +106,6 @@ public class SecurityMetricsService {
     }
     
     /**
-     * Gets the number of failed login attempts for an IP address.
-     *
-     * @param ipAddress IP address
-     * @return number of failed attempts
-     */
-    public int getFailedAttemptCount(String ipAddress) {
-        FailedAttemptRecord record = failedAttempts.get(ipAddress);
-        return record != null ? record.getCount() : 0;
-    }
-    
-    /**
-     * Gets endpoint access count for a user/IP and endpoint combination.
-     *
-     * @param email user email (null for anonymous)
-     * @param ipAddress IP address
-     * @param endpoint endpoint path
-     * @return access count
-     */
-    public int getEndpointAccessCount(String email, String ipAddress, String endpoint) {
-        if (email != null) {
-            String key = email + ":" + endpoint;
-            AtomicInteger count = endpointAccessCounts.get(key);
-            if (count != null) {
-                return count.get();
-            }
-        }
-        String ipKey = ipAddress + ":" + endpoint;
-        AtomicInteger count = endpointAccessCounts.get(ipKey);
-        return count != null ? count.get() : 0;
-    }
-    
-    /**
-     * Cleans up old failed attempt records and resets access counts periodically.
-     * Runs every hour to prevent memory leaks.
-     */
-    @Scheduled(fixedRate = 3600000) // Every hour
-    public void cleanupOldRecords() {
-        Instant cutoff = Instant.now().minus(BRUTE_FORCE_WINDOW_MINUTES + 5, ChronoUnit.MINUTES);
-        
-        // Remove old failed attempt records
-        failedAttempts.entrySet().removeIf(entry -> 
-            entry.getValue().getFirstAttempt().isBefore(cutoff)
-        );
-        
-        // Reset access counts (optional - can be adjusted based on needs)
-        // For now, we keep them for the lifetime of the application
-        // In production, you might want to persist these to a database
-    }
-    
-    /**
      * Internal record for tracking failed login attempts.
      */
     private static class FailedAttemptRecord {
