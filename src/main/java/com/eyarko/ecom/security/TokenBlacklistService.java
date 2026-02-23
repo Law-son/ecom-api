@@ -89,37 +89,6 @@ public class TokenBlacklistService {
     }
 
     /**
-     * Removes a token from the blacklist.
-     *
-     * @param token JWT token to remove from blacklist
-     */
-    public void removeFromBlacklist(String token) {
-        String tokenHash = hashToken(token);
-        blacklist.remove(tokenHash);
-    }
-
-    /**
-     * Clears all expired entries from the blacklist.
-     * <p>
-     * This method is scheduled to run periodically to prevent memory leaks.
-     */
-    @Scheduled(fixedRate = 3600000) // Run every hour
-    public void cleanupExpiredTokens() {
-        Instant now = Instant.now();
-        blacklist.entrySet().removeIf(entry -> entry.getValue().isBefore(now));
-    }
-
-    /**
-     * Gets the current size of the blacklist.
-     * Useful for monitoring and debugging.
-     *
-     * @return number of blacklisted tokens
-     */
-    public int getBlacklistSize() {
-        return blacklist.size();
-    }
-
-    /**
      * Hashes a token using SHA-256.
      * <p>
      * This ensures tokens are not stored in plain text, providing an additional

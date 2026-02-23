@@ -26,20 +26,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Page<Product> findByCategory_Id(Long categoryId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"category"})
-    Page<Product> findByCategory_NameIgnoreCase(String categoryName, Pageable pageable);
-
-    @EntityGraph(attributePaths = {"category"})
     Page<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"category"})
-    Page<Product> findByPriceBetween(java.math.BigDecimal min, java.math.BigDecimal max, Pageable pageable);
-
-    @EntityGraph(attributePaths = {"category"})
-    Page<Product> findByNameContainingIgnoreCaseOrCategory_NameContainingIgnoreCase(
-        String name,
-        String categoryName,
-        Pageable pageable
-    );
 
     @EntityGraph(attributePaths = {"category"})
     Page<Product> findByCategory_IdAndNameContainingIgnoreCase(
@@ -56,12 +44,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     )
     Page<Product> searchByNameOrCategory(@Param("term") String term, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"category"})
-    Optional<Product> findByNameIgnoreCase(String name);
-
     boolean existsByCategory_Id(Long categoryId);
-
-    void deleteByCategory_Id(Long categoryId);
 }
 
 

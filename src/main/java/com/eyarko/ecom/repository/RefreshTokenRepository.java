@@ -23,16 +23,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     Optional<RefreshToken> findByToken(String token);
 
     /**
-     * Finds all valid (non-revoked, non-expired) refresh tokens for a user.
-     *
-     * @param user user entity
-     * @param now current timestamp
-     * @return optional refresh token
-     */
-    @Query("SELECT rt FROM RefreshToken rt WHERE rt.user = :user AND rt.revoked = false AND rt.expiresAt > :now ORDER BY rt.createdAt DESC")
-    Optional<RefreshToken> findValidTokenByUser(User user, Instant now);
-
-    /**
      * Revokes all refresh tokens for a user.
      *
      * @param userId user ID
