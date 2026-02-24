@@ -7,27 +7,14 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-/**
- * Resolves application roles for OAuth2-authenticated users.
- * <p>
- * This uses simple email allowlists configured via properties:
- * <ul>
- *   <li>{@code app.security.oauth2.admin-emails}</li>
- *   <li>{@code app.security.oauth2.staff-emails}</li>
- * </ul>
- * If an email is present in both lists, ADMIN wins.
- */
 @Component
 public class OAuth2RoleResolver {
     private final Set<String> adminEmails;
-    private final Set<String> staffEmails;
 
     public OAuth2RoleResolver(
-        @Value("${app.security.oauth2.admin-emails:}") String adminEmails,
-        @Value("${app.security.oauth2.staff-emails:}") String staffEmails
+        @Value("${app.security.oauth2.admin-emails:}") String adminEmails
     ) {
         this.adminEmails = parseEmails(adminEmails);
-        this.staffEmails = parseEmails(staffEmails);
     }
 
     public UserRole resolveRole(String email) {
@@ -37,9 +24,6 @@ public class OAuth2RoleResolver {
         String normalized = email.trim().toLowerCase();
         if (adminEmails.contains(normalized)) {
             return UserRole.ADMIN;
-        }
-        if (staffEmails.contains(normalized)) {
-            return UserRole.STAFF;
         }
         return UserRole.CUSTOMER;
     }

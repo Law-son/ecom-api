@@ -147,37 +147,13 @@ public class CustomOidcUserService extends OidcUserService {
         );
     }
 
-    /**
-     * Determines if a role should be upgraded based on OAuth2 allowlists.
-     * <p>
-     * Role hierarchy: CUSTOMER < STAFF < ADMIN
-     * <p>
-     * Rules:
-     * <ul>
-     *   <li>Never downgrade (e.g., ADMIN -> CUSTOMER)</li>
-     *   <li>Only upgrade if resolved role is higher than existing role</li>
-     *   <li>If roles are equal, keep existing role</li>
-     * </ul>
-     *
-     * @param existingRole The user's current role
-     * @param resolvedRole The role resolved from OAuth2 allowlists
-     * @return true if role should be upgraded, false otherwise
-     */
     private static boolean shouldUpgradeRole(UserRole existingRole, UserRole resolvedRole) {
-        // Never downgrade
         if (resolvedRole == UserRole.CUSTOMER) {
-            return false; // Never downgrade to CUSTOMER
+            return false;
         }
-        
-        // Upgrade if resolved role is higher
-        if (existingRole == UserRole.CUSTOMER && resolvedRole != UserRole.CUSTOMER) {
-            return true; // Upgrade CUSTOMER to STAFF or ADMIN
+        if (existingRole == UserRole.CUSTOMER && resolvedRole == UserRole.ADMIN) {
+            return true;
         }
-        if (existingRole == UserRole.STAFF && resolvedRole == UserRole.ADMIN) {
-            return true; // Upgrade STAFF to ADMIN
-        }
-        
-        // If roles are equal or existing is higher, don't change
         return false;
     }
 }
