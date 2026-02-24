@@ -44,7 +44,10 @@ public class AuthController {
         httpResponse.addCookie(refreshTokenCookie);
         
         return ResponseUtil.success("Login successful", 
-            new AuthResponse(authResponse.getAccessToken(), null));
+            AuthResponse.builder()
+                .accessToken(authResponse.getAccessToken())
+                .tokenType("Bearer")
+                .build());
     }
 
     @PostMapping("/refresh")
@@ -66,7 +69,10 @@ public class AuthController {
         httpResponse.addCookie(refreshTokenCookie);
         
         return ResponseUtil.success("Token refreshed successfully", 
-            new AuthResponse(authResponse.getAccessToken(), null));
+            AuthResponse.builder()
+                .accessToken(authResponse.getAccessToken())
+                .tokenType("Bearer")
+                .build());
     }
 
     @PostMapping("/logout")
