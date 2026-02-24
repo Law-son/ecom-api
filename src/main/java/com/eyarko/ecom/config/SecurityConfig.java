@@ -11,6 +11,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.core.annotation.Order;
@@ -108,47 +109,11 @@ public class SecurityConfig {
         "/api/v1/inventory/**"  // Inventory management
     };
 
-    /**
-     * Password encoder using BCrypt hashing algorithm.
-     * <p>
-     * <b>Password Security with Hashing:</b>
-     * <ul>
-     *   <li>Passwords are hashed using BCrypt before storage (never stored in plain text)</li>
-     *   <li>BCrypt uses adaptive hashing with salt generation</li>
-     *   <li>Work factor (default 10) makes brute-force attacks computationally expensive</li>
-     *   <li>Each password hash includes a unique salt, preventing rainbow table attacks</li>
-     * </ul>
-     * <p>
-     * BCrypt is used for:
-     * <ul>
-     *   <li>Storing password hashes in the database (never plain text)</li>
-     *   <li>Verifying passwords during authentication (matches plain text against hash)</li>
-     *   <li>Encoding passwords when users register or update their password</li>
-     * </ul>
-     * <p>
-     * <b>Security Features:</b>
-     * <ul>
-     *   <li>One-way hashing: passwords cannot be reversed from hashes</li>
-     *   <li>Salt per password: prevents rainbow table attacks</li>
-     *   <li>Adaptive cost: can increase work factor as hardware improves</li>
-     * </ul>
-     *
-     * @return BCrypt password encoder instance
-     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Authentication manager for handling authentication requests.
-     * <p>
-     * Uses DaoAuthenticationProvider with UserDetailsService and PasswordEncoder.
-     *
-     * @param http HttpSecurity configuration
-     * @return configured AuthenticationManager
-     * @throws Exception if configuration fails
-     */
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
         return http.getSharedObject(org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder.class)

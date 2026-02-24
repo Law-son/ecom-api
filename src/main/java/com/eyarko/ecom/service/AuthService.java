@@ -21,9 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-/**
- * Handles authentication workflows including login, token refresh, and logout.
- */
 @Service
 public class AuthService {
     private final UserRepository userRepository;
@@ -52,16 +49,6 @@ public class AuthService {
         this.cacheManager = cacheManager;
     }
 
-    /**
-     * Authenticates a user by email and password using Spring Security's AuthenticationManager.
-     * <p>
-     * Returns both access token (short-lived) and refresh token (long-lived).
-     * Logs authentication success or failure events for security monitoring.
-     *
-     * @param request login payload
-     * @param httpRequest HTTP request (for IP address and user agent)
-     * @return authentication response with access and refresh tokens
-     */
     @Transactional
     public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
         String ipAddress = SecurityEventLogger.getClientIpAddress(httpRequest);
@@ -102,12 +89,6 @@ public class AuthService {
         }
     }
 
-    /**
-     * Refreshes an access token using a valid refresh token.
-     *
-     * @param refreshTokenString refresh token string
-     * @return new authentication response with new access and refresh tokens
-     */
     @Transactional
     public AuthResponse refreshToken(String refreshTokenString) {
         RefreshToken refreshToken = refreshTokenService.validateRefreshToken(refreshTokenString);
@@ -126,21 +107,6 @@ public class AuthService {
             .build();
     }
 
-    /**
-     * Logs out a user by revoking all refresh tokens and blacklisting the current access token.
-     * <p>
-     * This method:
-     * <ul>
-     *   <li>Revokes all refresh tokens for the user</li>
-     *   <li>Blacklists the current access token (if provided)</li>
-     *   <li>Evicts user cache</li>
-     *   <li>Logs logout event</li>
-     * </ul>
-     *
-     * @param email user email
-     * @param accessToken current access token to blacklist (optional)
-     * @param httpRequest HTTP request (for IP address)
-     */
     @Transactional
     public void logout(String email, String accessToken, HttpServletRequest httpRequest) {
         User user = userRepository.findByEmailIgnoreCase(email)
@@ -164,12 +130,6 @@ public class AuthService {
         evictUserCache(user.getId());
     }
     
-    /**
-     * Logs out a user by revoking all refresh tokens (without access token).
-     *
-     * @param email user email
-     * @param httpRequest HTTP request (for IP address)
-     */
     @Transactional
     public void logout(String email, HttpServletRequest httpRequest) {
         logout(email, null, httpRequest);

@@ -22,9 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-/**
- * Product business logic.
- */
 @Service
 public class ProductService {
     private final ProductRepository productRepository;
@@ -41,12 +38,6 @@ public class ProductService {
         this.inventoryRepository = inventoryRepository;
     }
 
-    /**
-     * Creates a new product.
-     *
-     * @param request product payload
-     * @return created product
-     */
     @CacheEvict(value = "productLists", allEntries = true)
     @Transactional
     public ProductResponse createProduct(ProductRequest request) {
@@ -62,13 +53,6 @@ public class ProductService {
         return ProductMapper.toResponse(productRepository.save(product));
     }
 
-    /**
-     * Updates an existing product.
-     *
-     * @param id product id
-     * @param request product payload
-     * @return updated product
-     */
     @Caching(evict = {
         @CacheEvict(value = "productById", key = "#id"),
         @CacheEvict(value = "productLists", allEntries = true)
@@ -89,12 +73,6 @@ public class ProductService {
         return ProductMapper.toResponse(productRepository.save(product));
     }
 
-    /**
-     * Retrieves a product by id.
-     *
-     * @param id product id
-     * @return product details
-     */
     @Cacheable(value = "productById", key = "#id")
     @Transactional(readOnly = true)
     public ProductResponse getProduct(Long id) {
@@ -106,14 +84,6 @@ public class ProductService {
         return ProductMapper.toResponse(product, qty);
     }
 
-    /**
-     * Lists products with optional filtering and pagination.
-     *
-     * @param categoryId optional category filter
-     * @param search optional search query
-     * @param pageable paging and sorting options
-     * @return list of products
-     */
     @Cacheable(
         value = "productLists",
         key = "'list:' + #categoryId + ':' + #search + ':' + #pageable.pageNumber + ':' + #pageable.pageSize "
@@ -148,11 +118,6 @@ public class ProductService {
             .build();
     }
 
-    /**
-     * Deletes a product by id.
-     *
-     * @param id product id
-     */
     @Caching(evict = {
         @CacheEvict(value = "productById", key = "#id"),
         @CacheEvict(value = "productLists", allEntries = true)
