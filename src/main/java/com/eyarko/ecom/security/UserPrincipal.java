@@ -3,12 +3,14 @@ package com.eyarko.ecom.security;
 import com.eyarko.ecom.entity.User;
 import java.util.Collection;
 import java.util.List;
+import lombok.Builder;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 @Getter
+@Builder
 public class UserPrincipal implements UserDetails {
     private final Long id;
     private final String fullName;
@@ -16,17 +18,15 @@ public class UserPrincipal implements UserDetails {
     private final String passwordHash;
     private final List<GrantedAuthority> authorities;
 
-    private UserPrincipal(Long id, String fullName, String email, String passwordHash, List<GrantedAuthority> authorities) {
-        this.id = id;
-        this.fullName = fullName;
-        this.email = email;
-        this.passwordHash = passwordHash;
-        this.authorities = authorities;
-    }
-
     public static UserPrincipal fromUser(User user) {
         List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
-        return new UserPrincipal(user.getId(), user.getFullName(), user.getEmail(), user.getPasswordHash(), authorities);
+        return UserPrincipal.builder()
+            .id(user.getId())
+            .fullName(user.getFullName())
+            .email(user.getEmail())
+            .passwordHash(user.getPasswordHash())
+            .authorities(authorities)
+            .build();
     }
 
     @Override

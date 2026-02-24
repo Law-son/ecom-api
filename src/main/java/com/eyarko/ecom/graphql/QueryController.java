@@ -119,7 +119,7 @@ public class QueryController {
         int resolvedPage = page == null ? 0 : page;
         int resolvedSize = size == null ? 20 : size;
         Pageable pageable = PageRequest.of(resolvedPage, resolvedSize, Sort.by(Sort.Direction.DESC, "orderDate"));
-        return orderService.listOrders(userId, pageable).getItems();
+        return orderService.listOrders(pageable).getItems();
     }
 
     /**
