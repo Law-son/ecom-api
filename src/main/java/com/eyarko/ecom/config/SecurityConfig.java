@@ -48,9 +48,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
                 
                 // Authenticated endpoints (CUSTOMER + ADMIN)
-                .requestMatchers("/api/v1/cart/**", "/graphql").authenticated()
-                .requestMatchers(HttpMethod.POST, "/api/v1/orders", "/api/v1/reviews").authenticated()
-                .requestMatchers(HttpMethod.GET, "/api/v1/orders/**").authenticated()
+                .requestMatchers("/api/v1/cart/**", "/graphql").hasAnyRole("CUSTOMER", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/orders", "/api/v1/reviews").hasAnyRole("CUSTOMER", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/v1/orders/**").hasAnyRole("CUSTOMER", "ADMIN")
                 
                 // Admin-only endpoints
                 .requestMatchers("/api/v1/inventory/**").hasRole("ADMIN")
