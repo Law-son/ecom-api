@@ -2,62 +2,41 @@ package com.eyarko.ecom.security;
 
 import com.eyarko.ecom.dto.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.security.SignatureException;
-import org.springframework.security.core.Authentication;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/**
- * JWT authentication filter that validates tokens on each protected request.
- * <p>
- * This filter:
- * <ul>
- *   <li>Extracts JWT token from Authorization header (Bearer token)</li>
- *   <li>Validates token signature using HMAC SHA-256</li>
- *   <li>Checks token expiration</li>
- *   <li>Rejects tampered or expired tokens with 401 Unauthorized</li>
- *   <li>Sets authentication context for valid tokens</li>
- * </ul>
- * <p>
- * Error responses:
- * <ul>
- *   <li>Expired token: "Token expired"</li>
- *   <li>Tampered/invalid token: "Invalid or expired token"</li>
- *   <li>Missing token: Request continues (maybe handled by authorization rules)</li>
- * </ul>
- */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    
     private final JwtService jwtService;
-    private final UserDetailsService userDetailsService;
     private final TokenBlacklistService tokenBlacklistService;
     private final SecurityEventLogger securityEventLogger;
     private final ObjectMapper objectMapper;
 
     public JwtAuthenticationFilter(
         JwtService jwtService,
-        UserDetailsService userDetailsService,
         TokenBlacklistService tokenBlacklistService,
         SecurityEventLogger securityEventLogger,
         ObjectMapper objectMapper
     ) {
         this.jwtService = jwtService;
-        this.userDetailsService = userDetailsService;
         this.tokenBlacklistService = tokenBlacklistService;
         this.securityEventLogger = securityEventLogger;
         this.objectMapper = objectMapper;
@@ -71,7 +50,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         String requestPath = request.getRequestURI();
         
-        // Skip JWT validation for public endpoints (especially /refresh which doesn't need access token)
         if (isPublicEndpoint(requestPath)) {
             filterChain.doFilter(request, response);
             return;
@@ -87,7 +65,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String ipAddress = SecurityEventLogger.getClientIpAddress(request);
         String endpoint = request.getRequestURI();
         
-        // Check if token is blacklisted (revoked)
         if (tokenBlacklistService.isTokenBlacklisted(token)) {
             securityEventLogger.logTokenRevoked(ipAddress, endpoint);
             sendErrorResponse(response, "Token has been revoked", HttpStatus.UNAUTHORIZED);
@@ -95,61 +72,73 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         
         try {
-            String username = jwtService.extractUsername(token);
+            Claims claims = jwtService.extractAllClaims(token);
+            String username = claims.getSubject();
+            
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                if (jwtService.isTokenValid(token, userDetails.getUsername())) {
+                if (jwtService.isTokenValid(token, username)) {
+                    Long userId = claims.get("userId", Long.class);
+                    String role = claims.get("role", String.class);
+                    String fullName = claims.get("fullName", String.class);
+                    
+                    UserPrincipal userPrincipal = UserPrincipal.builder()
+                        .id(userId)
+                        .email(username)
+                        .fullName(fullName)
+                        .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + role)))
+                        .build();
+                    
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails,
+                        userPrincipal,
                         null,
-                        userDetails.getAuthorities()
+                        userPrincipal.getAuthorities()
                     );
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                     
-                    // Log successful token validation
                     securityEventLogger.logTokenValid(username, ipAddress, endpoint);
                 }
             }
         } catch (ExpiredJwtException ex) {
-            // Token expired - check if this is a logout endpoint
-            // For logout, we allow expired tokens to pass through so users can still log out
             if (requestPath.equals("/api/v1/auth/logout")) {
-                // Extract user info from expired token for logout
                 try {
-                    String username = ex.getClaims().getSubject();
-                    if (username != null) {
-                        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                        );
-                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                        SecurityContextHolder.getContext().setAuthentication(authentication);
-                        
-                        // Log that we're allowing expired token for logout
-                        securityEventLogger.logTokenExpired(ipAddress, endpoint);
-                        // Continue to log out endpoint
-                        filterChain.doFilter(request, response);
-                        return;
-                    }
+                    Claims claims = ex.getClaims();
+                    String username = claims.getSubject();
+                    Long userId = claims.get("userId", Long.class);
+                    String role = claims.get("role", String.class);
+                    String fullName = claims.get("fullName", String.class);
+                    
+                    UserPrincipal userPrincipal = UserPrincipal.builder()
+                        .id(userId)
+                        .email(username)
+                        .fullName(fullName)
+                        .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + role)))
+                        .build();
+                    
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        userPrincipal,
+                        null,
+                        userPrincipal.getAuthorities()
+                    );
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    
+                    securityEventLogger.logTokenExpired(ipAddress, endpoint);
+                    filterChain.doFilter(request, response);
+                    return;
                 } catch (Exception e) {
-                    // If we can't extract user info, fall through to error
+                    // Fall through to error
                 }
             }
             
-            // For other endpoints, return 401 Unauthorized
             securityEventLogger.logTokenExpired(ipAddress, endpoint);
             sendErrorResponse(response, "Token expired", HttpStatus.UNAUTHORIZED);
             return;
         } catch (SignatureException ex) {
-            // Token tampered - return 401 Unauthorized
             securityEventLogger.logTokenInvalid(ipAddress, endpoint, "Invalid signature");
             sendErrorResponse(response, "Invalid token signature", HttpStatus.UNAUTHORIZED);
             return;
         } catch (JwtException | IllegalArgumentException ex) {
-            // Invalid token format or other JWT error - return 401 Unauthorized
             securityEventLogger.logTokenInvalid(ipAddress, endpoint, ex.getMessage());
             sendErrorResponse(response, "Invalid or expired token", HttpStatus.UNAUTHORIZED);
             return;
@@ -168,30 +157,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         objectMapper.writeValue(response.getOutputStream(), payload);
     }
     
-    /**
-     * Checks if the request path is a public endpoint that should bypass JWT validation.
-     * <p>
-     * This is especially important for the /refresh endpoint, which should work
-     * even when the access token is expired (that's the whole point of refresh tokens).
-     *
-     * @param requestPath The request URI path
-     * @return true if the endpoint is public and should bypass JWT validation
-     */
     private boolean isPublicEndpoint(String requestPath) {
-        // Public authentication endpoints
         if (requestPath.equals("/api/v1/auth/login") || 
             requestPath.equals("/api/v1/auth/refresh")) {
             return true;
         }
         
-        // Swagger/OpenAPI endpoints
         if (requestPath.startsWith("/swagger-ui") || 
             requestPath.startsWith("/v3/api-docs") ||
             requestPath.startsWith("/graphiql")) {
             return true;
         }
         
-        // Actuator health endpoints
         if (requestPath.equals("/actuator/health") || 
             requestPath.equals("/actuator/info")) {
             return true;
@@ -200,4 +177,3 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return false;
     }
 }
-

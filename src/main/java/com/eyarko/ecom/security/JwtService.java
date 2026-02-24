@@ -104,6 +104,10 @@ public class JwtService {
     public String extractUsername(String token) {
         return parseClaims(token).getSubject();
     }
+    
+    public Claims extractAllClaims(String token) {
+        return parseClaims(token);
+    }
 
     /**
      * Validates a JWT token.
