@@ -43,11 +43,28 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         HttpServletResponse response,
         Authentication authentication
     ) throws IOException {
-        UserPrincipalOAuth2User oauth2User = (UserPrincipalOAuth2User) authentication.getPrincipal();
-        UserPrincipal userPrincipal = oauth2User.getPrincipal();
+        Object principal = authentication.getPrincipal();
+        User user;
         
-        User user = userRepository.findById(userPrincipal.getId())
-            .orElseThrow(() -> new IllegalStateException("User not found: " + userPrincipal.getEmail()));
+        if (principal instanceof UserPrincipalOAuth2User oauth2User) {
+            UserPrincipal userPrincipal = oauth2User.getPrincipal();
+            user = userRepository.findById(userPrincipal.getId())
+                .orElseThrow(() -> new IllegalStateException("User not found: " + userPrincipal.getEmail()));
+        } else {
+            String email = null;
+            if (principal instanceof org.springframework.security.oauth2.core.oidc.user.OidcUser oidcUser) {
+                email = oidcUser.getEmail();
+            } else if (principal instanceof org.springframework.security.oauth2.core.user.OAuth2User oauth2User) {
+                email = oauth2User.getAttribute("email");
+            }
+            
+            if (email == null || email.isBlank()) {
+                throw new IllegalStateException("No email from OAuth2 provider");
+            }
+            
+            user = userRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new IllegalStateException("User not found: " + email));
+        }
 
         String accessToken = jwtService.generateToken(user);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
