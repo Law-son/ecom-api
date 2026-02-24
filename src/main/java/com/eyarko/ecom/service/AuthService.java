@@ -7,14 +7,16 @@ import com.eyarko.ecom.entity.User;
 import com.eyarko.ecom.repository.UserRepository;
 import com.eyarko.ecom.security.JwtService;
 import com.eyarko.ecom.security.SecurityEventLogger;
-import com.eyarko.ecom.security.SecurityMetricsService;
 import com.eyarko.ecom.security.TokenBlacklistService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -25,36 +27,33 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class AuthService {
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final TokenBlacklistService tokenBlacklistService;
     private final SecurityEventLogger securityEventLogger;
-    private final SecurityMetricsService securityMetricsService;
     private final CacheManager cacheManager;
 
     public AuthService(
         UserRepository userRepository,
-        PasswordEncoder passwordEncoder,
+        AuthenticationManager authenticationManager,
         JwtService jwtService,
         RefreshTokenService refreshTokenService,
         TokenBlacklistService tokenBlacklistService,
         SecurityEventLogger securityEventLogger,
-        SecurityMetricsService securityMetricsService,
         CacheManager cacheManager
     ) {
         this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
         this.tokenBlacklistService = tokenBlacklistService;
         this.securityEventLogger = securityEventLogger;
-        this.securityMetricsService = securityMetricsService;
         this.cacheManager = cacheManager;
     }
 
     /**
-     * Authenticates a user by email and password.
+     * Authenticates a user by email and password using Spring Security's AuthenticationManager.
      * <p>
      * Returns both access token (short-lived) and refresh token (long-lived).
      * Logs authentication success or failure events for security monitoring.
@@ -69,34 +68,22 @@ public class AuthService {
         String userAgent = SecurityEventLogger.getUserAgent(httpRequest);
         
         try {
-            User user = userRepository.findByEmailIgnoreCase(request.getEmail())
-                .orElseThrow(() -> {
-                    securityEventLogger.logAuthenticationFailure(
-                        request.getEmail(), ipAddress, userAgent, "User not found"
-                    );
-                    securityMetricsService.recordFailedLogin(request.getEmail(), ipAddress);
-                    return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
-                });
-
-            if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-                securityEventLogger.logAuthenticationFailure(
-                    request.getEmail(), ipAddress, userAgent, "Invalid password"
-                );
-                securityMetricsService.recordFailedLogin(request.getEmail(), ipAddress);
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
-            }
+            // Use Spring Security's AuthenticationManager for authentication
+            Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
             
-            // Record successful login and reset failed attempts
-            securityMetricsService.recordSuccessfulLogin(ipAddress);
+            // Get authenticated user
+            User user = userRepository.findByEmailIgnoreCase(request.getEmail())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
 
+            // Update last login
             user.setLastLogin(Instant.now());
             userRepository.save(user);
             evictUserCache(user.getId());
 
-            // Generate access token
+            // Generate tokens
             String accessToken = jwtService.generateToken(user);
-
-            // Generate refresh token
             RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
             // Log successful authentication
@@ -107,9 +94,11 @@ public class AuthService {
                 .refreshToken(refreshToken.getToken())
                 .tokenType("Bearer")
                 .build();
-        } catch (ResponseStatusException ex) {
-            // Re-throw after logging
-            throw ex;
+        } catch (BadCredentialsException ex) {
+            securityEventLogger.logAuthenticationFailure(
+                request.getEmail(), ipAddress, userAgent, "Invalid credentials"
+            );
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
     }
 

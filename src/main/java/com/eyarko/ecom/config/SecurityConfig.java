@@ -140,6 +140,21 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Authentication manager for handling authentication requests.
+     * <p>
+     * Uses DaoAuthenticationProvider with UserDetailsService and PasswordEncoder.
+     *
+     * @param http HttpSecurity configuration
+     * @return configured AuthenticationManager
+     * @throws Exception if configuration fails
+     */
+    @Bean
+    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
+        return http.getSharedObject(org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder.class)
+            .build();
+    }
+
     @Bean
     @Order(1)
     public SecurityFilterChain oauth2SecurityFilterChain(
