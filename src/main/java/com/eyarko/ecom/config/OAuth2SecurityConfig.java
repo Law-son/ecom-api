@@ -1,7 +1,6 @@
 package com.eyarko.ecom.config;
 
 import com.eyarko.ecom.security.CustomOAuth2UserService;
-import com.eyarko.ecom.security.CustomOidcUserService;
 import com.eyarko.ecom.security.OAuth2AuthenticationSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,7 +20,6 @@ public class OAuth2SecurityConfig {
     public SecurityFilterChain oauth2SecurityFilterChain(
         HttpSecurity http,
         CustomOAuth2UserService customOAuth2UserService,
-        CustomOidcUserService customOidcUserService,
         OAuth2AuthenticationSuccessHandler successHandler,
         CorsConfigurationSource corsConfigurationSource,
         RateLimitFilter rateLimitFilter
@@ -32,9 +30,7 @@ public class OAuth2SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
             .oauth2Login(oauth2 -> oauth2
-                .userInfoEndpoint(userInfo -> userInfo
-                    .userService(customOAuth2UserService)
-                    .oidcUserService(customOidcUserService))
+                .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                 .successHandler(successHandler)
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
