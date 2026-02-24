@@ -9,7 +9,7 @@ Authentication uses JWT bearer tokens signed with HMAC SHA-256.
 
 - Log in via `POST /api/v1/auth/login` to receive a JWT token.
 - Send the token on protected endpoints as `Authorization: Bearer <token>`.
-- Roles: `CUSTOMER`, `STAFF`, `ADMIN`.
+- Roles: `CUSTOMER`, `ADMIN`. **[UPDATED]**
 
 ### OAuth2 Login and Signup (Google)
 
@@ -35,7 +35,7 @@ When setting up OAuth2 credentials in Google Cloud Console, configure:
 
 **Important:** The redirect URI path `/login/oauth2/code/google` is Spring Security's default OAuth2 callback endpoint and must match exactly.
 
-#### OAuth2 Login/Signup Flow
+#### OAuth2 Login/Signup Flow **[UPDATED]**
 
 **Endpoint:** `GET /oauth2/authorization/google`
 
@@ -55,20 +55,34 @@ When setting up OAuth2 credentials in Google Cloud Console, configure:
    - **If user doesn't exist**: Creates new user account with:
      - Email from Google
      - Full name from Google
-     - Role based on email allowlists (ADMIN/STAFF/CUSTOMER)
-     - Random password hash (user can set password later if needed)
+     - Role based on email allowlists (ADMIN/CUSTOMER)
+     - NULL password (user can set password later if needed)
    - User is saved to the database (`users` table)
 
 4. **Token issuance and frontend redirect:**
-   - Access token (JWT) and refresh token are generated
-   - User is redirected to: `OAUTH2_REDIRECT_URI` (default: `http://localhost:5173/oauth2/redirect`)
-   - Tokens are passed as query parameters: `?accessToken=...&refreshToken=...&tokenType=Bearer`
-   - Frontend should extract tokens from URL and store them securely
+   - **On Success:**
+     - Access token (JWT) and refresh token are generated
+     - User is redirected to: `OAUTH2_REDIRECT_URI` (default: `http://localhost:5173/oauth2/redirect`)
+     - Tokens are passed as query parameters: `?accessToken=...&refreshToken=...&tokenType=Bearer`
+   - **On Failure:**
+     - User is redirected to: `OAUTH2_REDIRECT_URI` with error parameter
+     - Error is passed as query parameter: `?error={errorMessage}`
+   - Frontend should check for `accessToken` (success) or `error` (failure) in URL parameters
 
-**Response (via redirect):**
+**Success Response (via redirect):**
 ```
 http://localhost:5173/oauth2/redirect?accessToken=<jwt_token>&refreshToken=<refresh_token>&tokenType=Bearer
 ```
+
+**Failure Response (via redirect):**
+```
+http://localhost:5173/oauth2/redirect?error=<error_message>
+```
+
+**Common OAuth2 Errors:**
+- `No email from OAuth2 provider` - Google account has no email address
+- `OAuth2 authentication failed` - Generic authentication failure
+- `User not found: {email}` - User provisioning failed
 
 #### Account Linking with Email/Password Authentication
 
@@ -97,34 +111,25 @@ Configure OAuth2 credentials via environment variables (in `.env` file):
 - `GOOGLE_OAUTH_CLIENT_ID`: Your Google OAuth2 Client ID
 - `GOOGLE_OAUTH_CLIENT_SECRET`: Your Google OAuth2 Client Secret
 - `OAUTH2_REDIRECT_URI`: Frontend redirect URI (default: `http://localhost:5173/oauth2/redirect`)
-- `OAUTH2_ADMIN_EMAILS`: Comma-separated admin emails
-- `OAUTH2_STAFF_EMAILS`: Comma-separated staff emails
+- `OAUTH2_ADMIN_EMAILS`: Comma-separated admin emails **[UPDATED]**
 
-### RBAC Verification (Postman)
+### RBAC Verification (Postman) **[UPDATED]**
 
 Use these Postman checks to verify role-based access once OAuth2 credentials are configured:
 
 1. **Configure role allowlists (env vars or `application.properties`):**
-   - Set `OAUTH2_STAFF_EMAILS` to include your Google email to test STAFF access
    - Set `OAUTH2_ADMIN_EMAILS` to include an admin Google email to test ADMIN access
 
 2. **Login via Google OAuth2:**
    - Open `GET /oauth2/authorization/google` in a browser and complete login
-   - Your frontend redirect page should capture `accessToken` from query params
+   - Your frontend redirect page should capture `accessToken` from query params (success) or `error` (failure)
 
-3. **Call an ADMIN/STAFF endpoint (should succeed for STAFF/ADMIN):**
-   - `GET /api/v1/inventory/{productId}`
-   - Header: `Authorization: Bearer <accessToken>`
-   - Expect:
-     - `200 OK` for `STAFF` or `ADMIN`
-     - `403 Forbidden` for `CUSTOMER`
-
-4. **Call an ADMIN-only endpoint (should succeed only for ADMIN):**
+3. **Call an ADMIN-only endpoint (should succeed only for ADMIN):**
    - `POST /api/v1/products`
    - Header: `Authorization: Bearer <accessToken>`
    - Expect:
      - `200 OK` / `201 Created` for `ADMIN`
-     - `403 Forbidden` for `STAFF`/`CUSTOMER`
+     - `403 Forbidden` for `CUSTOMER`
 
 Tip: You can decode the JWT token to confirm `role` claim matches the expected role.
 
