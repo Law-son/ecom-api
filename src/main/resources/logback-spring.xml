@@ -3,10 +3,8 @@
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
 
-    <!-- Suppress Hibernate SQL exception logs for foreign key constraints -->
-    <logger name="org.hibernate.engine.jdbc.spi.SqlExceptionHelper" level="WARN" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-    </logger>
+    <!-- Suppress Hibernate SQL exception logs completely -->
+    <logger name="org.hibernate.engine.jdbc.spi.SqlExceptionHelper" level="OFF"/>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
