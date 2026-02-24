@@ -61,9 +61,11 @@ When setting up OAuth2 credentials in Google Cloud Console, configure:
 
 4. **Token issuance and frontend redirect:**
    - **On Success:**
-     - Access token (JWT) and refresh token are generated
+     - Access token (JWT) is generated
+     - Refresh token is generated and set as HttpOnly cookie
      - User is redirected to: `OAUTH2_REDIRECT_URI` (default: `http://localhost:5173/oauth2/redirect`)
-     - Tokens are passed as query parameters: `?accessToken=...&refreshToken=...&tokenType=Bearer`
+     - Access token passed as query parameter: `?accessToken=...`
+     - Refresh token stored in HttpOnly cookie (secure, not accessible via JavaScript)
    - **On Failure:**
      - User is redirected to: `OAUTH2_REDIRECT_URI` with error parameter
      - Error is passed as query parameter: `?error={errorMessage}`
@@ -71,7 +73,8 @@ When setting up OAuth2 credentials in Google Cloud Console, configure:
 
 **Success Response (via redirect):**
 ```
-http://localhost:5173/oauth2/redirect?accessToken=<jwt_token>&refreshToken=<refresh_token>&tokenType=Bearer
+URL: http://localhost:5173/oauth2/redirect?accessToken=<jwt_token>
+Cookie: refreshToken=<refresh_token>; HttpOnly; Path=/; Max-Age=604800
 ```
 
 **Failure Response (via redirect):**
@@ -122,7 +125,10 @@ Use these Postman checks to verify role-based access once OAuth2 credentials are
 
 2. **Login via Google OAuth2:**
    - Open `GET /oauth2/authorization/google` in a browser and complete login
-   - Your frontend redirect page should capture `accessToken` from query params (success) or `error` (failure)
+   - Your frontend redirect page should:
+     - Check for `accessToken` query parameter (success) or `error` query parameter (failure)
+     - Store access token in memory (not localStorage)
+     - Refresh token is automatically stored in HttpOnly cookie
 
 3. **Call an ADMIN-only endpoint (should succeed only for ADMIN):**
    - `POST /api/v1/products`
@@ -169,7 +175,7 @@ Tip: You can decode the JWT token to confirm `role` claim matches the expected r
 - Expired tokens are rejected with `401 Unauthorized` and message "Token expired"
 - Invalid token format returns `401 Unauthorized` with message "Invalid or expired token"
 
-### Testing JWT Tokens in Postman
+### Testing JWT Tokens in Postman **[UPDATED]**
 
 1. **Login to get tokens:**
    ```
@@ -180,22 +186,21 @@ Tip: You can decode the JWT token to confirm `role` claim matches the expected r
      "password": "password123"
    }
    ```
-   Response will contain both `accessToken` and `refreshToken` in the `data` field.
+   Response will contain `accessToken` in the `data` field.
+   Refresh token is automatically set as HttpOnly cookie (not visible in response body).
    - Use `accessToken` for API requests (short-lived, expires in 60 minutes)
-   - Store `refreshToken` securely (long-lived, expires in 7 days)
+   - Refresh token stored securely in HttpOnly cookie (long-lived, expires in 7 days)
 
 2. **Refresh access token:**
    ```
    POST http://localhost:8080/api/v1/auth/refresh
-   Body (JSON):
-   {
-     "refreshToken": "<your-refresh-token>"
-   }
    ```
-   Returns new `accessToken` and `refreshToken`. Old refresh token is revoked.
+   No request body needed - refresh token is automatically sent from cookie.
+   Returns new `accessToken` in response. New refresh token is set as HttpOnly cookie.
+   Old refresh token is revoked.
 
 3. **Decode token to view claims:**
-   - Copy the token from the login response
+   - Copy the access token from the login response
    - Use Postman's built-in JWT decoder:
      - Go to Authorization tab → Type: Bearer Token
      - Paste token → Click "Preview" to see decoded claims
@@ -215,6 +220,9 @@ Tip: You can decode the JWT token to confirm `role` claim matches the expected r
    - Verify `401 Unauthorized` response with "Token expired" message
 
 6. **Test tampered token:**
+   - Modify any character in the token
+   - Make a request with tampered token
+   - Verify `401 Unauthorized` response with "Invalid token signature" message
 
 7. **Logout:**
    ```
@@ -222,10 +230,13 @@ Tip: You can decode the JWT token to confirm `role` claim matches the expected r
    Headers:
    Authorization: Bearer <access-token>
    ```
-   Revokes all refresh tokens for the authenticated user.
-   - Modify any character in the token
-   - Make a request with tampered token
-   - Verify `401 Unauthorized` response with "Invalid token signature" message
+   Revokes all refresh tokens for the authenticated user and clears the refresh token cookie.
+
+**Important Notes:**
+- Refresh tokens are stored in HttpOnly cookies for security (not accessible via JavaScript)
+- Access tokens are returned in response body and should be stored in memory (not localStorage)
+- Cookies are automatically sent with requests to the same domain
+- For cross-origin requests, ensure CORS is configured with `credentials: 'include'`
 
 Public endpoints:
 - `POST /api/v1/auth/login`

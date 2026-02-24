@@ -4,6 +4,7 @@ import com.eyarko.ecom.entity.RefreshToken;
 import com.eyarko.ecom.entity.User;
 import com.eyarko.ecom.repository.UserRepository;
 import com.eyarko.ecom.service.RefreshTokenService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -51,11 +52,14 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         String accessToken = jwtService.generateToken(user);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
-        String url = redirectUri
-            + "?accessToken=" + URLEncoder.encode(accessToken, StandardCharsets.UTF_8)
-            + "&refreshToken=" + URLEncoder.encode(refreshToken.getToken(), StandardCharsets.UTF_8)
-            + "&tokenType=Bearer";
+        Cookie refreshTokenCookie = new Cookie("refreshToken", refreshToken.getToken());
+        refreshTokenCookie.setHttpOnly(true);
+        refreshTokenCookie.setSecure(false);
+        refreshTokenCookie.setPath("/");
+        refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60);
+        response.addCookie(refreshTokenCookie);
 
+        String url = redirectUri + "?accessToken=" + URLEncoder.encode(accessToken, StandardCharsets.UTF_8);
         response.sendRedirect(url);
     }
 }
