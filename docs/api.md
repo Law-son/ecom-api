@@ -156,7 +156,7 @@ Tip: You can decode the JWT token to confirm `role` claim matches the expected r
 - `POST /api/v1/demo/form-submit` - Submit form with CSRF protection (requires CSRF token)
 - See README.md for detailed explanation of CORS vs CSRF interaction and testing instructions
 
-### JWT Token Details
+### JWT Token Details **[UPDATED]**
 
 **Token Claims:**
 - `sub` (subject): User email address
@@ -174,6 +174,12 @@ Tip: You can decode the JWT token to confirm `role` claim matches the expected r
 - Tampered tokens are rejected with `401 Unauthorized` and message "Invalid token signature"
 - Expired tokens are rejected with `401 Unauthorized` and message "Token expired"
 - Invalid token format returns `401 Unauthorized` with message "Invalid or expired token"
+
+**User Identification:**
+- User ID is automatically extracted from JWT token by the authentication filter
+- Clients should NOT send userId in request body or as query parameter
+- All authenticated endpoints automatically use the userId from the token
+- This prevents users from impersonating other users
 
 ### Testing JWT Tokens in Postman **[UPDATED]**
 
@@ -349,13 +355,15 @@ Inventory response fields include:
 - `productId`, `quantity`, `lastUpdated`
 - `stockStatus`: same display string as products (see Products above). Use for admin/stock UIs.
 
-### Orders
+### Orders **[UPDATED]**
 - `POST /api/v1/orders`
   - Body:
-    - `userId`
     - `items`: `[{ productId, quantity }]`
+  - Note: userId is automatically extracted from JWT token
 - `GET /api/v1/orders`
-  - Query: `userId`, `page`, `size`, `sortBy`, `sortDir`
+  - Query: `page`, `size`, `sortBy`, `sortDir`
+  - Returns orders for authenticated user (CUSTOMER) or all orders (ADMIN)
+  - Note: userId is automatically extracted from JWT token
 - `GET /api/v1/orders/{id}`
 - `PATCH /api/v1/orders/{id}/status`
   - Body: `status` (PENDING, RECEIVED, SHIPPED, DELIVERED, CANCELLED)

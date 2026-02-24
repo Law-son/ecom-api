@@ -72,7 +72,15 @@ public class OrderService {
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order items are required");
         }
-        User user = userRepository.findById(request.getUserId())
+        
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+            || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Authentication required");
+        }
+        Long userId = principal.getId();
+        
+        User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         Order order = Order.builder()
@@ -91,9 +99,7 @@ public class OrderService {
         evictProductCaches(items);
 
         Order savedOrder = orderRepository.save(order);
-        // Flush to ensure items are persisted immediately
         orderRepository.flush();
-        // Reload order with items to ensure they're properly loaded
         savedOrder = orderRepository.findById(savedOrder.getId())
             .orElse(savedOrder);
         return OrderMapper.toResponse(savedOrder);
@@ -124,14 +130,23 @@ public class OrderService {
      * @return list of orders
      */
     @Transactional(readOnly = true)
-    public PagedResponse<OrderResponse> listOrders(Long userId, Pageable pageable) {
-        var page = (userId == null)
+    public PagedResponse<OrderResponse> listOrders(Pageable pageable) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+            || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Authentication required");
+        }
+        
+        boolean isAdmin = authentication.getAuthorities().stream()
+            .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        
+        var page = isAdmin
             ? orderRepository.findAllOrders(pageable)
-            : orderRepository.findByUser_Id(userId, pageable);
-        // Ensure items are loaded for all orders (triggers eager fetch)
+            : orderRepository.findByUser_Id(principal.getId(), pageable);
+            
         page.getContent().forEach(order -> {
             if (order.getItems() != null) {
-                order.getItems().size(); // Force initialization
+                order.getItems().size();
             }
         });
         List<OrderResponse> items = page.getContent().stream()

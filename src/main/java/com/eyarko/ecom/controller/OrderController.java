@@ -67,14 +67,13 @@ public class OrderController {
      */
     @GetMapping
     public ApiResponse<PagedResponse<OrderResponse>> listOrders(
-        @RequestParam(required = false) Long userId,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size,
         @RequestParam(defaultValue = "orderDate") String sortBy,
         @RequestParam(defaultValue = "desc") String sortDir
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(parseDirection(sortDir), sortBy));
-        return ResponseUtil.success("Orders retrieved", orderService.listOrders(userId, pageable));
+        return ResponseUtil.success("Orders retrieved", orderService.listOrders(pageable));
     }
 
     /**

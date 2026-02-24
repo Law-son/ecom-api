@@ -2,7 +2,6 @@ package com.eyarko.ecom.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,11 +15,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class OrderCreateRequest {
-    @NotNull
-    private Long userId;
-
     @NotEmpty
     @Valid
     private List<OrderItemRequest> items;
 }
-
