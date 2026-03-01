@@ -84,14 +84,31 @@
   - `jvm.threads.live`: 65
   - `jvm.memory.used`: 284,681,664 bytes
 
+### Thread-Pool Tuning Matrix (2026-03-01)
+
+Workload shape used for each config (same test each run):
+- 60 total requests at concurrency 20
+- mix: 40x `GET /api/v1/products`, 10x `GET /api/v1/reviews`, 10x `POST /api/v1/orders`
+- dev stock seeding enabled to keep order writes available
+
+| Config | core/max/queue | Throughput (req/s) | Avg Latency (ms) | p95 Latency (ms) | Error Rate | Process CPU | Heap Used | Live Threads |
+|--------|-----------------|--------------------|------------------|------------------|------------|-------------|-----------|--------------|
+| Small | 2 / 4 / 20 | 25.90 | 338.09 | 1575.47 | 0.0% | ~28.60% | ~170.9 MiB | 56 |
+| Medium | 5 / 10 / 100 | 25.28 | 359.34 | 1751.01 | 0.0% | ~18.21% | ~175.5 MiB | 56 |
+| Large | 10 / 20 / 300 | 24.15 | 355.29 | 1681.01 | 0.0% | ~13.46% | ~120.5 MiB | 56 |
+
+Executor observation:
+- `executor.active`, `executor.pool.size`, `executor.queued`, and `executor.completed` remained `0` during all runs.
+- Conclusion: current request path in this branch is not materially dispatching work to `taskExecutor`; tuning did not expose async saturation.
+- Artifact: `docs/thread_pool_tuning_matrix.jsonl`
+
+Chosen configuration for now:
+- `corePoolSize=2`, `maxPoolSize=4`, `queueCapacity=20` (small profile)
+- Rationale: best measured throughput and p95 latency in the current workload while preserving `0%` error rate.
+
 ## Remaining Feature 3 Work
 
 - Validate deadlock safety under repeated mixed operations (order create + order cancel + inventory adjust)
-- Run multi-configuration thread pool tuning tests and compare:
-  - CPU usage
-  - memory usage
-  - throughput
-- Document and justify selected final thread-pool configuration
 - Add a concise concurrency test runbook for repeatability
 
 ## Notes

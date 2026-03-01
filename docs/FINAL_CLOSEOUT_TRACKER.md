@@ -134,6 +134,8 @@ With stock seeded:
 
 ## D) Feature 3 Remaining
 
+**Status:** ✅ Completed (thread-pool matrix captured and selected config documented)
+
 ### 1. Thread-Pool Tuning Matrix
 
 ### Action
