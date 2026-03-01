@@ -259,12 +259,72 @@ Authenticated endpoints:
 - `POST /api/v1/reviews`
 - `POST /graphql` (all GraphQL queries/mutations)
 
+## IDEMPOTENCY CHANGES
+
+The API now supports HTTP idempotency for selected high-impact `POST` operations using an in-memory Caffeine cache (single-instance deployment only). This feature is request-header driven and does not use Redis or database persistence.
+
+### Header
+
+- Header name: `Idempotency-Key`
+- If header is missing: request is processed normally (no idempotency enforcement)
+- Reuse window: 30 minutes (`expireAfterWrite`)
+
+### Enforced Endpoints
+
+- `POST /api/v1/orders`
+- `POST /api/v1/cart/items`
+- `POST /api/v1/reviews`
+- `POST /graphql` only when GraphQL payload contains high-priority mutations:
+  - `createOrder`
+  - `addReview`
+
+### Request Matching Rules
+
+For requests with `Idempotency-Key`, the server computes a SHA-256 hash of the request body.
+
+- Same key + same request body:
+  - Server returns the previously cached response (same status/body), controller is not executed again.
+- Same key + different request body:
+  - Server returns `400 Bad Request`.
+
+### Cache Policy
+
+- Cached: all `2xx` and `4xx` responses
+- Not cached: all `5xx` responses (retries are allowed)
+- Max entries: `100,000`
+- Storage: in-memory Caffeine cache only
+
+### Client Implementation Guidance
+
+1. Generate a unique `Idempotency-Key` per user action (UUID recommended).
+2. Send the same key only when retrying the exact same request payload.
+3. Do not reuse the same key for different payloads; this will return `400`.
+4. Keep retry attempts within the 30-minute idempotency window.
+
+### Example (Order Create)
+
+```
+POST /api/v1/orders
+Idempotency-Key: 3c27184e-4828-4f08-9f76-93f0fca8933e
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{
+  "items": [
+    { "productId": 1, "quantity": 2 }
+  ]
+}
+```
+
+If the same request is retried with the same key and identical body within 30 minutes, the original response is returned.
+
 Admin-only endpoints:
 - `GET|PUT|DELETE /api/v1/users/**` (user creation is public)
 - `POST|PUT|DELETE /api/v1/products/**`
 - `POST|PUT|DELETE /api/v1/categories/**`
 - `GET|POST /api/v1/inventory/**`
 - `PUT|PATCH /api/v1/orders/{id}/status`
+- `GET|POST /api/v1/profiling/jfr/**`
 
 ## REST Endpoints
 
@@ -379,6 +439,28 @@ Order status rules:
   - Body: `userId`, `productId`, `rating`, `comment`, `metadata`
 - `GET /api/v1/reviews`
   - Query: `productId`, `userId`, `page`, `size`, `sortBy`, `sortDir`
+
+### Java Flight Recorder (JFR) Profiling
+- `GET /api/v1/profiling/jfr/status`
+  - Admin only.
+  - Returns current JFR state and output directory.
+- `POST /api/v1/profiling/jfr/start`
+  - Admin only.
+  - Query params:
+    - `durationSeconds` (int, optional, default `60`, must be > 0)
+    - `settings` (string, optional, default `profile`; JFR config name such as `default` or `profile`)
+  - Starts a JVM JFR recording.
+  - Returns `409 Conflict` if a recording is already running.
+- `POST /api/v1/profiling/jfr/stop`
+  - Admin only.
+  - Query params:
+    - `fileName` (string, optional, e.g. `checkout-load.jfr`)
+  - Stops the active recording and dumps it to `app.profiling.jfr.output-dir`.
+  - Returns `409 Conflict` if no active recording exists.
+
+JFR configuration properties:
+- `app.profiling.jfr.enabled` (default: `true`)
+- `app.profiling.jfr.output-dir` (default: `target/profiling`)
 
 ### Paged Response Shape
 Paged endpoints return:

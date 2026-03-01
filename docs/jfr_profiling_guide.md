@@ -33,6 +33,29 @@ jcmd <pid> JFR.stop
 java -XX:StartFlightRecording=settings=profile,filename=continuous.jfr -jar target/ecom-0.0.1-SNAPSHOT.jar
 ```
 
+### Method 4: Runtime API (Implemented)
+
+The app now exposes admin-only endpoints to start/stop JFR recordings at runtime.
+
+```bash
+# Requires ADMIN bearer token
+TOKEN="<admin-access-token>"
+
+# Start recording (60s profile settings)
+curl -X POST "http://localhost:8080/api/v1/profiling/jfr/start?durationSeconds=60&settings=profile" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Check status
+curl "http://localhost:8080/api/v1/profiling/jfr/status" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Stop and dump file (optional fileName)
+curl -X POST "http://localhost:8080/api/v1/profiling/jfr/stop?fileName=api-load.jfr" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+By default dumps are written to `target/profiling` (configurable with `app.profiling.jfr.output-dir`).
+
 ---
 
 ## 2. Recording Profiles

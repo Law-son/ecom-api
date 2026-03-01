@@ -1,5 +1,6 @@
 package com.eyarko.ecom.config;
 
+import com.eyarko.ecom.infrastructure.web.IdempotencyFilter;
 import com.eyarko.ecom.security.JwtAuthenticationFilter;
 import com.eyarko.ecom.security.JwtProperties;
 import com.eyarko.ecom.security.RestAccessDeniedHandler;
@@ -30,7 +31,8 @@ public class SecurityConfig {
         RestAuthenticationEntryPoint authenticationEntryPoint,
         RestAccessDeniedHandler accessDeniedHandler,
         CorsConfigurationSource corsConfigurationSource,
-        RateLimitFilter rateLimitFilter
+        RateLimitFilter rateLimitFilter,
+        IdempotencyFilter idempotencyFilter
     ) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
@@ -61,9 +63,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**", "/api/v1/categories/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/v1/users").hasRole("ADMIN")
                 .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/profiling/**").hasRole("ADMIN")
                 
                 .anyRequest().denyAll()
             )
+            .addFilterBefore(idempotencyFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .httpBasic(AbstractHttpConfigurer::disable)
