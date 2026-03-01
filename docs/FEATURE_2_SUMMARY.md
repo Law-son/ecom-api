@@ -44,9 +44,15 @@
 - [x] Concurrent API test executed (scripted equivalent of Postman runner)
 - [ ] **USER ACTION:** Run load testing using Apache JMeter
 - [x] Response-time snapshot captured for key read endpoints
-- [ ] Race-condition validation for order writes (blocked in current env due zero inventory)
-- [ ] Data-consistency validation for order writes (blocked in current env due zero inventory)
+- [x] Race-condition validation for order writes (seeded stock, concurrent run completed)
+- [x] Data-consistency validation for order writes (no oversell/negative inventory observed)
 - [x] Thread-pool metrics checked via Actuator
+
+Order-write consistency validation (2026-03-01, seeded dev stock run):
+- Product tested: `id=3` (`Banana`), initial stock `40`, final stock `8`.
+- Order attempts: 2 warm-up + 10 normal + 20 concurrent = 32 successful `POST /api/v1/orders` responses.
+- Expected stock delta: `40 - 32 = 8` and observed final stock was exactly `8`.
+- Outcome: no negative inventory and no race-induced oversell detected in this run.
 
 Automated concurrent test snapshot (2026-03-01):
 - Window: 20 workers, 60 total requests, ~28.21 req/s aggregate.
@@ -313,9 +319,9 @@ ERROR AsyncOrderService - Error reserving inventory: Insufficient stock
    - Measure response times
 
 2. **Verify No Race Conditions**
-   - Create multiple orders simultaneously
-   - Check inventory consistency
-   - Verify no negative values
+   - Completed in seeded-stock run (20 concurrent successful order writes)
+   - Inventory consistency validated (`40 -> 8` with 32 successful orders)
+   - No negative values observed
 
 3. **Monitor Thread Pool**
    - Check Actuator metrics

@@ -16,6 +16,8 @@ This tracker maps each remaining checklist item to concrete actions, commands, e
 
 ## A) Unblock Write-Path Profiling (Critical)
 
+**Status:** ✅ Completed (2026-03-01, dev seeded-stock run)
+
 ### Why
 
 Order-write metrics and race/data-consistency checks are currently blocked because inventory is zero across products.
@@ -44,6 +46,8 @@ Use one of the following:
 ---
 
 ## B) Feature 1 Remaining (Baseline Profiling Completion)
+
+**Status:** 🟡 In progress (write-path + runtime snapshots updated; consolidated comparison rows still pending)
 
 ### 1. Complete Normal/Concurrent Write Metrics
 
@@ -91,6 +95,8 @@ curl http://localhost:8080/actuator/threaddump
 ---
 
 ## C) Feature 2 Remaining
+
+**Status:** 🟡 In progress (race/data consistency completed; full JMeter run pending)
 
 ### 1. Full JMeter Run
 

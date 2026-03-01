@@ -46,10 +46,10 @@ This report documents the baseline performance metrics of the e-commerce system 
 
 #### Memory Usage (Heap)
 ```
-Initial Heap Size: [NOT CAPTURED IN QUICK RUN]
-Max Heap Size: [NOT CAPTURED IN QUICK RUN]
-Used Heap: ~268 MB before normal load, ~278 MB after normal load
-Committed Heap: [NOT CAPTURED IN QUICK RUN]
+Initial Heap Size: N/A (not exposed as a dedicated actuator metric in this runtime)
+Max Heap Size: ~4,227,858,430 bytes (~3.94 GiB)
+Used Heap: ~84,290,016 bytes (~80.4 MiB) snapshot; prior read-run snapshots observed ~268-311 MB
+Committed Heap: ~199,229,440 bytes (~190.0 MiB)
 ```
 
 **Screenshot Location:** `docs/screenshots/baseline/jvm-memory.png`
@@ -58,7 +58,7 @@ Committed Heap: [NOT CAPTURED IN QUICK RUN]
 ```
 Active Threads: 44 (normal load)
 Peak Threads: 45 (concurrent read run sample)
-Daemon Threads: [NOT CAPTURED IN QUICK RUN]
+Daemon Threads: 39
 Thread States Distribution: [SEE THREADEDUMP SCREENSHOT]
 ```
 
@@ -66,9 +66,9 @@ Thread States Distribution: [SEE THREADEDUMP SCREENSHOT]
 
 #### CPU Usage
 ```
-System CPU Usage: 0.0 before normal load, ~0.199 after normal load
-Process CPU Usage: [NOT CAPTURED IN QUICK RUN]
-CPU Load Average: [NOT CAPTURED IN QUICK RUN]
+System CPU Usage: 0.0 before normal load, ~0.199 after normal load, ~0.297 latest snapshot
+Process CPU Usage: ~0.0037 latest snapshot
+CPU Load Average: N/A on current Windows runtime (`system.load.average.1m` not exported)
 ```
 
 Order write-path runtime snapshot (seeded stock run):
@@ -82,10 +82,10 @@ Used Heap: ~311 MB before, ~243 MB after run (GC activity observed)
 
 #### Garbage Collection
 ```
-GC Collections (Young Gen): [TO BE MEASURED]
-GC Collections (Old Gen): [TO BE MEASURED]
-GC Time (Young Gen): [TO BE MEASURED]
-GC Time (Old Gen): [TO BE MEASURED]
+GC Collections (Young Gen): 2
+GC Collections (Old Gen): 0 observed in sampled run
+GC Time (Young Gen): ~0.028 s total (max pause ~0.015 s)
+GC Time (Old Gen): 0 s observed in sampled run
 ```
 
 **Screenshot Location:** `docs/screenshots/baseline/gc-metrics.png`
@@ -100,14 +100,15 @@ Test using Postman with single requests:
 |----------|--------|-------------------|-----|-----|--------|
 | `/api/v1/products?page=0&size=20` | GET | 15.05 ms | - | - | 200 (10/10) |
 | `/api/v1/products/3` | GET | 18.98 ms | - | - | 200 (10/10) |
-| `/api/v1/orders` | GET | [TO BE MEASURED] | - | - | - |
+| `/api/v1/orders` | GET | 20.46 ms | 13.48 ms | 30.61 ms | 200 (10/10, customer token) |
 | `/api/v1/orders` | POST | 37.13 ms | - | - | 200 (10/10, seeded stock run) |
-| `/api/v1/users` | GET | [TO BE MEASURED] | - | - | - |
-| `/api/v1/categories` | GET | [TO BE MEASURED] | - | - | - |
-| `/api/v1/reviews` | GET | [TO BE MEASURED] | - | - | - |
+| `/api/v1/users` | GET | 16.09 ms | 4.71 ms | 30.08 ms | 403 (10/10, admin-only endpoint) |
+| `/api/v1/categories` | GET | 9.16 ms | 4.55 ms | 22.91 ms | 200 (10/10) |
+| `/api/v1/reviews` | GET | 428.15 ms | 341.08 ms | 522.30 ms | 200 (10/10) |
 
 Normal-load note:
 - Order timing captured after enabling a dev-only profiling stock seed (`app.profiling.seed-inventory.enabled=true`) for reproducible write-path testing.
+- `/api/v1/users` remained access-restricted in baseline probes because the run used a CUSTOMER token; keep this endpoint under admin-auth tests.
 
 **Screenshot Location:** `docs/screenshots/baseline/api-response-times-normal.png`
 
@@ -121,7 +122,7 @@ Test using JMeter with 50 concurrent users, 100 requests each:
 |----------|--------|-------------------|-------------------|------------|-----------------|-----------------|
 | `/api/v1/products?page=0&size=20` | GET | 18.49 ms | N/A (quick concurrent probe) | 6.0% (3/50 = 429) | 35.96 ms | 47.45 ms |
 | `/api/v1/orders` | POST | 184.04 ms | N/A (20 concurrent requests) | 0% (20/20 success) | 176.45 ms (p50) | 296.41 ms |
-| `/api/v1/users` | GET | [TO BE MEASURED] | - | - | - | - |
+| `/api/v1/users` | GET | 8.76 ms | N/A (10 concurrent forbidden checks) | 100% 403 (expected auth restriction) | N/A | 15.98 ms |
 
 Concurrent-load note:
 - Quick run used 25 workers x 2 loops for product list/detail endpoints to avoid triggering excessive rate-limit failures.
