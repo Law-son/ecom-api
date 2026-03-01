@@ -42,7 +42,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
                 .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**", 
-                    "/actuator/health", "/actuator/info", "/graphiql/**").permitAll()
+                    "/actuator/**", "/graphiql/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/products/**", "/api/v1/categories/**", 
                     "/api/v1/reviews/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()

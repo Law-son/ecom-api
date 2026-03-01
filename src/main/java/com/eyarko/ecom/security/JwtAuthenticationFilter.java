@@ -169,8 +169,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return true;
         }
         
-        if (requestPath.equals("/actuator/health") || 
-            requestPath.equals("/actuator/info")) {
+        if (requestPath.startsWith("/actuator")) {
             return true;
         }
         
