@@ -162,6 +162,8 @@ Test 2-3 async executor configs (small/medium/large) by changing:
 
 ## E) Feature 4 Remaining
 
+**Status:** 🟡 In progress (baseline-vs-optimized deltas completed; EXPLAIN ANALYZE execution pending local DB CLI)
+
 ### 1. Strict Baseline vs Optimized Delta Table
 
 ### Action

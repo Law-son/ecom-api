@@ -1,0 +1,44 @@
+{
+  "timestamp": "2026-03-01 17:20:18",
+  "optimized": [
+    {
+      "endpoint": "/api/v1/products?page=0&size=20",
+      "success": 30,
+      "total": 30,
+      "status_counts": {
+        "200": 30
+      },
+      "avg_ms": 14.09,
+      "p50_ms": 10.36,
+      "p95_ms": 28.84
+    },
+    {
+      "endpoint": "/api/v1/products/3",
+      "success": 30,
+      "total": 30,
+      "status_counts": {
+        "200": 30
+      },
+      "avg_ms": 9.36,
+      "p50_ms": 6.77,
+      "p95_ms": 24.58
+    },
+    {
+      "endpoint": "/api/v1/reviews?page=0&size=20",
+      "success": 25,
+      "total": 30,
+      "status_counts": {
+        "200": 25,
+        "429": 5
+      },
+      "avg_ms": 401.8,
+      "p50_ms": 389.29,
+      "p95_ms": 477.04
+    }
+  ],
+  "runtime": {
+    "system_cpu_usage": 0.0,
+    "jvm_memory_used": 270201776.0,
+    "jvm_threads_live": 43.0
+  }
+}

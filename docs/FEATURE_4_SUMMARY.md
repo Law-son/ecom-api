@@ -88,14 +88,47 @@ Interpretation:
 - Review listing remains relatively high-latency versus product reads; this path is a good candidate for the next optimization pass (indexes/query shape/serialization costs).
 - No functional regression observed in optimized read paths during this quick pass.
 
+### 6) Baseline vs Optimized Delta Table (Same Endpoint Shape)
+
+Controlled A/B comparison run date/time: `2026-03-01 17:20:18`
+
+Method notes:
+- Optimized run used the same endpoint shapes as baseline section 3.2 (`30` requests per endpoint after warmup).
+- Dev stock seeding was enabled to keep environment stable, but only read endpoints were used in this table.
+- Rate limiter remained enabled; review endpoint saw some `429` responses in both baseline/optimized style probes.
+
+| Endpoint | Baseline Avg (ms) | Optimized Avg (ms) | Delta (%) | Result |
+| --- | ---: | ---: | ---: | --- |
+| `GET /api/v1/products?page=0&size=20` | 15.05 | 14.09 | +6.38% | Improved |
+| `GET /api/v1/products/3` | 18.98 | 9.36 | +50.68% | Improved |
+| `GET /api/v1/reviews?page=0&size=20` | 428.15 | 401.80 | +6.15% | Improved (still highest-latency path) |
+
+Runtime snapshot comparison (post-run):
+
+| Metric | Baseline Snapshot | Optimized Snapshot | Delta (%) | Note |
+| --- | ---: | ---: | ---: | --- |
+| `system.cpu.usage` | 0.0 | 0.0 | 0.00% | Flat in sampled windows |
+| `jvm.memory.used` (bytes) | 256,089,144 | 270,201,776 | -5.51% | Higher memory in optimized sample window |
+| `jvm.threads.live` | 42 | 43 | -2.38% | +1 thread observed |
+
+Artifact file:
+- `docs/feature4_ab_metrics.json`
+
+### 7) EXPLAIN ANALYZE Evidence Status
+
+- SQL templates with index-targeted checks are prepared in `docs/explain_analyze.sql`.
+- Local execution is currently blocked in this environment because PostgreSQL CLI tooling is unavailable (`psql: command not found`).
+- Next step when CLI/DB shell is available:
+  1. Replace placeholders (`:categoryId`, `:searchTerm`, `:categoryTerm`, `:userId`) with local values.
+  2. Run each `EXPLAIN ANALYZE` query.
+  3. Attach resulting plans/screenshots under `docs/screenshots/optimized/` and append findings here.
+
 ## Validation
 
 - `mvn -Dmaven.test.skip=true compile` -> **BUILD SUCCESS**
 
 ## Remaining Feature 4 Work
 
-- Capture strict baseline-vs-optimized deltas in a controlled A/B run and document percentage change
-- Validate index usage with `EXPLAIN ANALYZE` in your local DB environment
 - Optimize review list path further (query/index tuning based on measured latency)
 - Add algorithm-focused micro-optimizations where profiling still shows hotspots
-- Produce final Feature 4 before/after report table
+- Validate index usage with `EXPLAIN ANALYZE` once DB CLI access is available
