@@ -69,7 +69,7 @@ public class CartService {
             cart.getItems().add(item);
         }
         Cart saved = cartRepository.save(cart);
-        return CartMapper.toResponse(saved);
+        return CartMapper.toResponse(reloadCartWithItems(saved.getId()));
     }
 
     @Transactional
@@ -80,7 +80,7 @@ public class CartService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cart item not found"));
         item.setQuantity(request.getQuantity());
         Cart saved = cartRepository.save(cart);
-        return CartMapper.toResponse(saved);
+        return CartMapper.toResponse(reloadCartWithItems(saved.getId()));
     }
 
     @Transactional
@@ -91,7 +91,7 @@ public class CartService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cart item not found"));
         cart.getItems().remove(item);
         Cart saved = cartRepository.save(cart);
-        return CartMapper.toResponse(saved);
+        return CartMapper.toResponse(reloadCartWithItems(saved.getId()));
     }
 
     @Transactional
@@ -100,7 +100,7 @@ public class CartService {
         Cart cart = getOrCreateCart(userId);
         cart.getItems().clear();
         Cart saved = cartRepository.save(cart);
-        return CartMapper.toResponse(saved);
+        return CartMapper.toResponse(reloadCartWithItems(saved.getId()));
     }
 
     private Cart getOrCreateCart(Long userId) {
@@ -112,6 +112,11 @@ public class CartService {
                 cart.setItems(new ArrayList<>());
                 return cartRepository.save(cart);
             });
+    }
+
+    private Cart reloadCartWithItems(Long cartId) {
+        return cartRepository.findById(cartId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cart not found"));
     }
 }
 
