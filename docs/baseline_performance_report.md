@@ -182,17 +182,17 @@ Second Level Cache Misses: [NOT CAPTURED IN THIS QUICK RUN]
 
 ### 5.1 Blocking Methods Identified
 
-#### Method 1: [Class.methodName()]
-- **Execution Time:** [TO BE MEASURED]
-- **Blocking Reason:** [Database call / External API / File I/O / etc.]
-- **Impact:** [Thread blocking / Response delay / etc.]
+#### Method 1: `ReviewService.listReviews(...)`
+- **Execution Time:** ~207.76 ms avg, ~255.78 ms p95 (sampled via `GET /api/v1/reviews?productId=3&page=0&size=20`)
+- **Blocking Reason:** MongoDB read + pagination + object mapping on review path.
+- **Impact:** Highest-latency read endpoint in sampled baseline; contributes to slower user-facing review pages under load.
 
 **Screenshot Location:** `docs/screenshots/baseline/blocking-method-1.png`
 
-#### Method 2: [Class.methodName()]
-- **Execution Time:** [TO BE MEASURED]
-- **Blocking Reason:** [Database call / External API / File I/O / etc.]
-- **Impact:** [Thread blocking / Response delay / etc.]
+#### Method 2: `AuthService.login(...)` (via `POST /api/v1/auth/login`)
+- **Execution Time:** ~134.45 ms avg (valid login), ~116.18 ms avg (invalid login)
+- **Blocking Reason:** User lookup + password hash verification/token generation in authentication path.
+- **Impact:** Moderate request latency on auth endpoints; can add noticeable overhead under repeated login traffic.
 
 **Screenshot Location:** `docs/screenshots/baseline/blocking-method-2.png`
 
@@ -202,17 +202,18 @@ Second Level Cache Misses: [NOT CAPTURED IN THIS QUICK RUN]
 
 ### 6.1 Thread Dump Analysis
 ```
-Blocked Threads: [TO BE MEASURED]
-Waiting Threads: [TO BE MEASURED]
-Runnable Threads: [TO BE MEASURED]
+Blocked Threads: 0
+Waiting Threads: 16
+Runnable Threads: 12
+Timed Waiting Threads: 16
 ```
 
 **Screenshot Location:** `docs/screenshots/baseline/thread-dump.png`
 
 ### 6.2 Contention Points Identified
-- **Location:** [Class and method]
-- **Type:** [Synchronized block / Lock / etc.]
-- **Wait Time:** [TO BE MEASURED]
+- **Location:** No hard contention hotspot observed in sampled thread dump.
+- **Type:** No `BLOCKED` threads detected during capture window.
+- **Wait Time:** Not significant in sampled run (threads are mostly `WAITING` / `TIMED_WAITING`, not lock-blocked).
 
 **Screenshot Location:** `docs/screenshots/baseline/thread-contention.png`
 
@@ -221,27 +222,27 @@ Runnable Threads: [TO BE MEASURED]
 ## 7. Identified Bottlenecks Summary
 
 ### 7.1 Critical Bottlenecks (High Priority)
-1. **[Bottleneck Name]**
-   - **Type:** Database / Service / Thread / Memory
-   - **Impact:** [Performance impact description]
-   - **Recommendation:** [Optimization approach]
+1. **Review endpoint latency (`ReviewService.listReviews`)**
+   - **Type:** Service/DB read path
+   - **Impact:** ~200-255 ms latency band in baseline sample; significantly slower than product endpoints.
+   - **Recommendation:** Optimize review query/index strategy and validate serialization/mapping overhead under load.
 
-2. **[Bottleneck Name]**
-   - **Type:** Database / Service / Thread / Memory
-   - **Impact:** [Performance impact description]
-   - **Recommendation:** [Optimization approach]
+2. **Rate limiting interference during concurrent profiling**
+   - **Type:** Service/policy
+   - **Impact:** `429` responses appear in burst tests and can skew measured throughput/error-rate values.
+   - **Recommendation:** Use a dedicated perf profile (or endpoint-specific limiter policy) for cleaner benchmark windows.
 
 ### 7.2 Moderate Bottlenecks (Medium Priority)
-1. **[Bottleneck Name]**
-   - **Type:** Database / Service / Thread / Memory
-   - **Impact:** [Performance impact description]
-   - **Recommendation:** [Optimization approach]
+1. **Authentication path latency (`AuthService.login`)**
+   - **Type:** Service/security
+   - **Impact:** ~116-134 ms average latency in sampled run.
+   - **Recommendation:** Monitor under sustained load; tune auth-related DB access and hashing settings only if proven bottleneck.
 
 ### 7.3 Minor Bottlenecks (Low Priority)
-1. **[Bottleneck Name]**
-   - **Type:** Database / Service / Thread / Memory
-   - **Impact:** [Performance impact description]
-   - **Recommendation:** [Optimization approach]
+1. **Thread contention**
+   - **Type:** Thread/locking
+   - **Impact:** No meaningful lock contention detected in sampled dump (`BLOCKED=0`).
+   - **Recommendation:** Re-check during heavier mixed read/write load, but currently low priority.
 
 ---
 
@@ -356,6 +357,6 @@ After collecting baseline metrics:
 
 ---
 
-**Report Status:** 🟡 In Progress - Awaiting Profiling Data  
-**Last Updated:** [TO BE FILLED]  
+**Report Status:** 🟡 In Progress - Remaining write-path baseline blocked by zero inventory state  
+**Last Updated:** 2026-03-01  
 **Prepared By:** Performance Analysis Team
