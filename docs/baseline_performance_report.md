@@ -71,6 +71,13 @@ Process CPU Usage: [NOT CAPTURED IN QUICK RUN]
 CPU Load Average: [NOT CAPTURED IN QUICK RUN]
 ```
 
+Order write-path runtime snapshot (seeded stock run):
+```
+System CPU Usage: 0.0 before, ~0.266 after normal+concurrent order run
+Live Threads: 45 before/mid, 54 after concurrent order run
+Used Heap: ~311 MB before, ~243 MB after run (GC activity observed)
+```
+
 **Screenshot Location:** `docs/screenshots/baseline/cpu-usage.png`
 
 #### Garbage Collection
@@ -94,13 +101,13 @@ Test using Postman with single requests:
 | `/api/v1/products?page=0&size=20` | GET | 15.05 ms | - | - | 200 (10/10) |
 | `/api/v1/products/3` | GET | 18.98 ms | - | - | 200 (10/10) |
 | `/api/v1/orders` | GET | [TO BE MEASURED] | - | - | - |
-| `/api/v1/orders` | POST | N/A | - | - | 400 (stock unavailable in current dataset) |
+| `/api/v1/orders` | POST | 37.13 ms | - | - | 200 (10/10, seeded stock run) |
 | `/api/v1/users` | GET | [TO BE MEASURED] | - | - | - |
 | `/api/v1/categories` | GET | [TO BE MEASURED] | - | - | - |
 | `/api/v1/reviews` | GET | [TO BE MEASURED] | - | - | - |
 
 Normal-load note:
-- `POST /api/v1/orders` is currently blocked by test-data state (`stockQuantity=0` across products). Replenish inventory before re-running order latency baseline.
+- Order timing captured after enabling a dev-only profiling stock seed (`app.profiling.seed-inventory.enabled=true`) for reproducible write-path testing.
 
 **Screenshot Location:** `docs/screenshots/baseline/api-response-times-normal.png`
 
@@ -113,12 +120,13 @@ Test using JMeter with 50 concurrent users, 100 requests each:
 | Endpoint | Method | Avg Response Time | Throughput (req/s) | Error Rate | 90th Percentile | 95th Percentile |
 |----------|--------|-------------------|-------------------|------------|-----------------|-----------------|
 | `/api/v1/products?page=0&size=20` | GET | 18.49 ms | N/A (quick concurrent probe) | 6.0% (3/50 = 429) | 35.96 ms | 47.45 ms |
-| `/api/v1/orders` | POST | N/A | N/A | 100% blocked by stock state | N/A | N/A |
+| `/api/v1/orders` | POST | 184.04 ms | N/A (20 concurrent requests) | 0% (20/20 success) | 176.45 ms (p50) | 296.41 ms |
 | `/api/v1/users` | GET | [TO BE MEASURED] | - | - | - | - |
 
 Concurrent-load note:
 - Quick run used 25 workers x 2 loops for product list/detail endpoints to avoid triggering excessive rate-limit failures.
 - Rate limiter (`429`) still appears under burst traffic and should be considered when interpreting throughput/error-rate values.
+- Order concurrent run used seeded stock with a dedicated test user and single-item order payload (`quantity=1`) against one product.
 
 **Screenshot Location:** `docs/screenshots/baseline/api-response-times-concurrent.png`
 
