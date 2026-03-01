@@ -1,6 +1,6 @@
 # Baseline Performance Report (Before Optimization)
 
-**Date:** [To be filled after profiling]  
+**Date:** 2026-03-01  
 **Environment:** Development  
 **Java Version:** 17+  
 **Spring Boot Version:** 3.3.5
@@ -46,29 +46,29 @@ This report documents the baseline performance metrics of the e-commerce system 
 
 #### Memory Usage (Heap)
 ```
-Initial Heap Size: [TO BE MEASURED]
-Max Heap Size: [TO BE MEASURED]
-Used Heap: [TO BE MEASURED]
-Committed Heap: [TO BE MEASURED]
+Initial Heap Size: [NOT CAPTURED IN QUICK RUN]
+Max Heap Size: [NOT CAPTURED IN QUICK RUN]
+Used Heap: ~268 MB before normal load, ~278 MB after normal load
+Committed Heap: [NOT CAPTURED IN QUICK RUN]
 ```
 
 **Screenshot Location:** `docs/screenshots/baseline/jvm-memory.png`
 
 #### Thread Metrics
 ```
-Active Threads: [TO BE MEASURED]
-Peak Threads: [TO BE MEASURED]
-Daemon Threads: [TO BE MEASURED]
-Thread States Distribution: [TO BE MEASURED]
+Active Threads: 44 (normal load)
+Peak Threads: 45 (concurrent read run sample)
+Daemon Threads: [NOT CAPTURED IN QUICK RUN]
+Thread States Distribution: [SEE THREADEDUMP SCREENSHOT]
 ```
 
 **Screenshot Location:** `docs/screenshots/baseline/jvm-threads.png`
 
 #### CPU Usage
 ```
-System CPU Usage: [TO BE MEASURED]
-Process CPU Usage: [TO BE MEASURED]
-CPU Load Average: [TO BE MEASURED]
+System CPU Usage: 0.0 before normal load, ~0.199 after normal load
+Process CPU Usage: [NOT CAPTURED IN QUICK RUN]
+CPU Load Average: [NOT CAPTURED IN QUICK RUN]
 ```
 
 **Screenshot Location:** `docs/screenshots/baseline/cpu-usage.png`
@@ -91,13 +91,16 @@ Test using Postman with single requests:
 
 | Endpoint | Method | Avg Response Time | Min | Max | Status |
 |----------|--------|-------------------|-----|-----|--------|
-| `/api/v1/products` | GET | [TO BE MEASURED] | - | - | - |
-| `/api/v1/products/{id}` | GET | [TO BE MEASURED] | - | - | - |
+| `/api/v1/products?page=0&size=20` | GET | 15.05 ms | - | - | 200 (10/10) |
+| `/api/v1/products/3` | GET | 18.98 ms | - | - | 200 (10/10) |
 | `/api/v1/orders` | GET | [TO BE MEASURED] | - | - | - |
-| `/api/v1/orders` | POST | [TO BE MEASURED] | - | - | - |
+| `/api/v1/orders` | POST | N/A | - | - | 400 (stock unavailable in current dataset) |
 | `/api/v1/users` | GET | [TO BE MEASURED] | - | - | - |
 | `/api/v1/categories` | GET | [TO BE MEASURED] | - | - | - |
 | `/api/v1/reviews` | GET | [TO BE MEASURED] | - | - | - |
+
+Normal-load note:
+- `POST /api/v1/orders` is currently blocked by test-data state (`stockQuantity=0` across products). Replenish inventory before re-running order latency baseline.
 
 **Screenshot Location:** `docs/screenshots/baseline/api-response-times-normal.png`
 
@@ -109,9 +112,13 @@ Test using JMeter with 50 concurrent users, 100 requests each:
 
 | Endpoint | Method | Avg Response Time | Throughput (req/s) | Error Rate | 90th Percentile | 95th Percentile |
 |----------|--------|-------------------|-------------------|------------|-----------------|-----------------|
-| `/api/v1/products` | GET | [TO BE MEASURED] | - | - | - | - |
-| `/api/v1/orders` | POST | [TO BE MEASURED] | - | - | - | - |
+| `/api/v1/products?page=0&size=20` | GET | 18.49 ms | N/A (quick concurrent probe) | 6.0% (3/50 = 429) | 35.96 ms | 47.45 ms |
+| `/api/v1/orders` | POST | N/A | N/A | 100% blocked by stock state | N/A | N/A |
 | `/api/v1/users` | GET | [TO BE MEASURED] | - | - | - | - |
+
+Concurrent-load note:
+- Quick run used 25 workers x 2 loops for product list/detail endpoints to avoid triggering excessive rate-limit failures.
+- Rate limiter (`429`) still appears under burst traffic and should be considered when interpreting throughput/error-rate values.
 
 **Screenshot Location:** `docs/screenshots/baseline/api-response-times-concurrent.png`
 
