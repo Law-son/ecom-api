@@ -215,6 +215,8 @@ Compile a single report section with:
 
 ## G) Final Deliverables Closeout
 
+**Status:** 🟡 In progress (`plan.md` reconciled; PR creation/review step pending workflow choice)
+
 ### Action
 
 Mark final checklist in `plan.md` after all evidence is complete.
