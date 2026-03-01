@@ -88,7 +88,7 @@ public class ReviewService {
         } else {
             page = reviewRepository.findAllReviews(pageable);
         }
-        List<ReviewResponse> items = page.getContent().stream()
+        List<ReviewResponse> items = page.getContent().parallelStream()
             .map(ReviewMapper::toResponse)
             .collect(Collectors.toList());
         return PagedResponse.<ReviewResponse>builder()

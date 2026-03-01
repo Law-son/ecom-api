@@ -102,9 +102,9 @@ public class ProductService {
             page = productRepository.findAllProducts(pageable);
         }
         List<Product> products = page.getContent();
-        List<Long> ids = products.stream().map(Product::getId).collect(Collectors.toList());
+        List<Long> ids = products.parallelStream().map(Product::getId).collect(Collectors.toList());
         Map<Long, Integer> quantities = loadQuantities(ids);
-        List<ProductResponse> items = products.stream()
+        List<ProductResponse> items = products.parallelStream()
             .map(p -> ProductMapper.toResponse(p, quantities.getOrDefault(p.getId(), 0)))
             .collect(Collectors.toList());
         return PagedResponse.<ProductResponse>builder()
@@ -134,7 +134,7 @@ public class ProductService {
         if (productIds == null || productIds.isEmpty()) {
             return Map.of();
         }
-        return inventoryRepository.findQuantitiesByProductIds(productIds).stream()
+        return inventoryRepository.findQuantitiesByProductIds(productIds).parallelStream()
             .collect(Collectors.toMap(
                 view -> view.getProductId(),
                 view -> view.getQuantity() == null ? 0 : view.getQuantity()
