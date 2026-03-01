@@ -68,6 +68,55 @@ Observed metric presence:
 
 ## Remaining Feature 5 Work
 
-- Collect baseline-vs-optimized comparison values (CPU/memory/throughput/latency)
-- Build final reporting table with screenshot references
+### Consolidated Metrics Report (2026-03-01)
+
+Primary evidence sources:
+- Baseline: `docs/baseline_performance_report.md`
+- Optimized A/B: `docs/feature4_ab_metrics.json`
+- Throughput matrix: `docs/thread_pool_tuning_matrix.jsonl`
+
+#### A) Baseline vs Optimized Runtime + Latency
+
+| Metric | Baseline | Optimized | Delta (%) | Evidence |
+| --- | ---: | ---: | ---: | --- |
+| `GET /api/v1/products?page=0&size=20` avg latency | 15.05 ms | 14.09 ms | +6.38% | Baseline §3.2 / `feature4_ab_metrics.json` |
+| `GET /api/v1/products/3` avg latency | 18.98 ms | 9.36 ms | +50.68% | Baseline §3.2 / `feature4_ab_metrics.json` |
+| `GET /api/v1/reviews?page=0&size=20` avg latency | 428.15 ms | 401.80 ms | +6.15% | Baseline §3.2 / `feature4_ab_metrics.json` |
+| `system.cpu.usage` snapshot | 0.0 | 0.0 | 0.00% | Baseline §3.1 / `feature4_ab_metrics.json` |
+| `jvm.memory.used` snapshot | 256,089,144 B | 270,201,776 B | -5.51% | Baseline §3.1 / `feature4_ab_metrics.json` |
+| `jvm.threads.live` snapshot | 42 | 43 | -2.38% | Baseline §3.1 / `feature4_ab_metrics.json` |
+
+#### B) Throughput Comparison (Feature 3 Tuning Matrix)
+
+| Profile | Throughput (req/s) | Avg Latency (ms) | p95 Latency (ms) | Error Rate |
+| --- | ---: | ---: | ---: | ---: |
+| Small (`2/4/20`) | 25.90 | 338.09 | 1575.47 | 0.0% |
+| Medium (`5/10/100`) | 25.28 | 359.34 | 1751.01 | 0.0% |
+| Large (`10/20/300`) | 24.15 | 355.29 | 1681.01 | 0.0% |
+
+Selected profile:
+- `corePoolSize=2`, `maxPoolSize=4`, `queueCapacity=20` (best throughput and p95 in measured matrix).
+
+#### C) Screenshot/Artifact References
+
+- Baseline screenshots:
+  - `docs/screenshots/baseline/api-response-times-normal.png`
+  - `docs/screenshots/baseline/api-response-times-concurrent.png`
+  - `docs/screenshots/baseline/cpu-usage.png`
+  - `docs/screenshots/baseline/jvm-memory.png`
+  - `docs/screenshots/baseline/jmeter-results.png` (pending if JMeter is not installed)
+- Consolidated measurement artifacts:
+  - `docs/feature4_ab_metrics.json`
+  - `docs/thread_pool_tuning_matrix.jsonl`
+  - `docs/FEATURE_4_SUMMARY.md` (A/B delta table)
+
+#### D) Summary of Improvements
+
+- Product read paths improved measurably, with strongest gain on product detail latency.
+- Review path improved modestly but remains the highest-latency endpoint and should be prioritized for next optimization pass.
+- Runtime snapshots are generally stable; memory/thread samples vary slightly across probe windows.
+- Throughput under the Feature 3 mixed workload is stable across profiles, with the small profile leading in this environment.
+
+### Remaining Feature 5 Work
+
 - Prepare final submission report and demo notes
