@@ -103,13 +103,13 @@ public class ReviewService {
     }
 
     private void updateProductRating(Product product) {
-        List<Review> reviews = reviewRepository.findByProductId(product.getId());
-        int count = reviews.size();
+        ReviewRepository.ReviewStatsProjection stats = reviewRepository
+            .getReviewStatsByProductId(product.getId())
+            .orElse(null);
+        int count = stats != null && stats.getReviewCount() != null ? stats.getReviewCount() : 0;
         BigDecimal avg = BigDecimal.ZERO;
-        if (count > 0) {
-            int total = reviews.stream().mapToInt(Review::getRating).sum();
-            avg = BigDecimal.valueOf(total)
-                .divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP);
+        if (stats != null && stats.getAvgRating() != null) {
+            avg = BigDecimal.valueOf(stats.getAvgRating()).setScale(2, RoundingMode.HALF_UP);
         }
         product.setAvgRating(avg);
         product.setReviewCount(count);

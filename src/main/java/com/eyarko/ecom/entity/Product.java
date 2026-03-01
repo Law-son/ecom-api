@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.math.BigDecimal;
@@ -22,7 +23,14 @@ import lombok.Setter;
  * SQL-backed product model.
  */
 @Entity
-@Table(name = "products")
+@Table(
+    name = "products",
+    indexes = {
+        @Index(name = "idx_products_category_id", columnList = "category_id"),
+        @Index(name = "idx_products_avg_rating", columnList = "avg_rating"),
+        @Index(name = "idx_products_name", columnList = "name")
+    }
+)
 @Getter
 @Setter
 @NoArgsConstructor
