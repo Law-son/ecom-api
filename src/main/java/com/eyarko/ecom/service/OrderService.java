@@ -14,6 +14,8 @@ import com.eyarko.ecom.entity.User;
 import com.eyarko.ecom.mapper.OrderMapper;
 import com.eyarko.ecom.repository.InventoryRepository;
 import com.eyarko.ecom.security.UserPrincipal;
+import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.security.core.Authentication;
@@ -43,6 +45,7 @@ public class OrderService {
     private final InventoryRepository inventoryRepository;
     private final CacheManager cacheManager;
     private final InventoryLockManager inventoryLockManager;
+    private final ApplicationMetricsService applicationMetricsService;
 
     public OrderService(
         OrderRepository orderRepository,
@@ -50,7 +53,8 @@ public class OrderService {
         ProductRepository productRepository,
         InventoryRepository inventoryRepository,
         CacheManager cacheManager,
-        InventoryLockManager inventoryLockManager
+        InventoryLockManager inventoryLockManager,
+        ApplicationMetricsService applicationMetricsService
     ) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
@@ -58,6 +62,7 @@ public class OrderService {
         this.inventoryRepository = inventoryRepository;
         this.cacheManager = cacheManager;
         this.inventoryLockManager = inventoryLockManager;
+        this.applicationMetricsService = applicationMetricsService;
     }
 
     /**
@@ -71,41 +76,48 @@ public class OrderService {
         isolation = Isolation.READ_COMMITTED,
         rollbackFor = Exception.class
     )
+    @Timed(value = "app.orders.create.timed", description = "Time spent creating orders")
     public OrderResponse createOrder(OrderCreateRequest request) {
-        if (request.getItems() == null || request.getItems().isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order items are required");
+        Timer.Sample sample = applicationMetricsService.startTimer();
+        try {
+            if (request.getItems() == null || request.getItems().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order items are required");
+            }
+            
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()
+                || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Authentication required");
+            }
+            Long userId = principal.getId();
+            
+            User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+            Order order = Order.builder()
+                .user(user)
+                .status(OrderStatus.PENDING)
+                .build();
+
+            List<OrderItem> items = request.getItems().stream()
+                .map(item -> toOrderItem(order, item))
+                .collect(Collectors.toList());
+
+            order.setItems(items);
+            order.setTotalAmount(calculateTotal(items));
+
+            items.forEach(this::reserveInventory);
+            evictProductCaches(items);
+
+            Order savedOrder = orderRepository.save(order);
+            orderRepository.flush();
+            savedOrder = orderRepository.findById(savedOrder.getId())
+                .orElse(savedOrder);
+            applicationMetricsService.incrementProcessedOrders();
+            return OrderMapper.toResponse(savedOrder);
+        } finally {
+            applicationMetricsService.stopTimer(sample, "app.orders.create.duration");
         }
-        
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()
-            || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Authentication required");
-        }
-        Long userId = principal.getId();
-        
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-
-        Order order = Order.builder()
-            .user(user)
-            .status(OrderStatus.PENDING)
-            .build();
-
-        List<OrderItem> items = request.getItems().stream()
-            .map(item -> toOrderItem(order, item))
-            .collect(Collectors.toList());
-
-        order.setItems(items);
-        order.setTotalAmount(calculateTotal(items));
-
-        items.forEach(this::reserveInventory);
-        evictProductCaches(items);
-
-        Order savedOrder = orderRepository.save(order);
-        orderRepository.flush();
-        savedOrder = orderRepository.findById(savedOrder.getId())
-            .orElse(savedOrder);
-        return OrderMapper.toResponse(savedOrder);
     }
 
     /**
@@ -133,6 +145,7 @@ public class OrderService {
      * @return list of orders
      */
     @Transactional(readOnly = true)
+    @Timed(value = "app.orders.list.timed", description = "Time spent listing orders")
     public PagedResponse<OrderResponse> listOrders(Pageable pageable) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()

@@ -9,6 +9,7 @@ import com.eyarko.ecom.mapper.ReviewMapper;
 import com.eyarko.ecom.repository.ProductRepository;
 import com.eyarko.ecom.repository.ReviewRepository;
 import com.eyarko.ecom.repository.UserRepository;
+import io.micrometer.core.annotation.Timed;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -45,6 +46,7 @@ public class ReviewService {
      * @param request review payload
      * @return created review
      */
+    @Timed(value = "app.reviews.create.timed", description = "Time spent creating a review")
     public ReviewResponse createReview(ReviewCreateRequest request) {
         if (!userRepository.existsById(request.getUserId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
@@ -79,6 +81,7 @@ public class ReviewService {
      * @param pageable paging and sorting options
      * @return paged list of reviews
      */
+    @Timed(value = "app.reviews.list.timed", description = "Time spent listing reviews")
     public PagedResponse<ReviewResponse> listReviews(Long productId, Long userId, Pageable pageable) {
         Page<Review> page;
         if (productId != null) {

@@ -9,6 +9,7 @@ import com.eyarko.ecom.mapper.ProductMapper;
 import com.eyarko.ecom.repository.CategoryRepository;
 import com.eyarko.ecom.repository.InventoryRepository;
 import com.eyarko.ecom.repository.ProductRepository;
+import io.micrometer.core.annotation.Timed;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -75,6 +76,7 @@ public class ProductService {
 
     @Cacheable(value = "productById", key = "#id")
     @Transactional(readOnly = true)
+    @Timed(value = "app.products.get.timed", description = "Time spent fetching product detail")
     public ProductResponse getProduct(Long id) {
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
@@ -90,6 +92,7 @@ public class ProductService {
             + "+ ':' + #pageable.sort.toString()"
     )
     @Transactional(readOnly = true)
+    @Timed(value = "app.products.list.timed", description = "Time spent listing products")
     public PagedResponse<ProductResponse> listProducts(Long categoryId, String search, Pageable pageable) {
         Page<Product> page;
         if (categoryId != null && search != null && !search.isBlank()) {
