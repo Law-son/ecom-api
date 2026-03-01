@@ -128,40 +128,50 @@ Concurrent-load note:
 
 ### 4.1 Slow Queries Identified
 
-#### Query 1: [Query Description]
+#### Query 1: Product list with category join + pagination
 ```sql
-[SQL QUERY TO BE CAPTURED FROM LOGS]
+select
+    p1_0.product_id, p1_0.avg_rating, p1_0.category_id, c1_0.category_id,
+    c1_0.created_at, c1_0.category_name, c1_0.version, p1_0.created_at,
+    p1_0.description, p1_0.image_url, p1_0.name, p1_0.price,
+    p1_0.review_count, p1_0.version
+from products p1_0
+join categories c1_0 on c1_0.category_id = p1_0.category_id
+order by p1_0.name
+fetch first ? rows only
 ```
-- **Execution Time:** [TO BE MEASURED]
-- **Rows Returned:** [TO BE MEASURED]
-- **Issue:** [N+1 query / Missing index / Inefficient join / etc.]
+- **Execution Time:** ~17 ms (Hibernate statistics log sample)
+- **Rows Returned:** 7
+- **Issue:** Query itself is not slow in sampled run; endpoint latency was higher than SQL time, indicating additional non-DB overhead in request path.
 
 **Screenshot Location:** `docs/screenshots/baseline/slow-query-1.png`
 
-#### Query 2: [Query Description]
+#### Query 2: Inventory quantity batch lookup for product list
 ```sql
-[SQL QUERY TO BE CAPTURED FROM LOGS]
+SELECT product_id AS productId, quantity AS quantity
+FROM inventory
+WHERE product_id IN (?, ?, ?, ?, ?, ?, ?)
 ```
-- **Execution Time:** [TO BE MEASURED]
-- **Rows Returned:** [TO BE MEASURED]
-- **Issue:** [N+1 query / Missing index / Inefficient join / etc.]
+- **Execution Time:** ~3 ms (Hibernate statistics log sample)
+- **Rows Returned:** 5
+- **Issue:** No immediate SQL bottleneck observed; current batch lookup pattern is efficient and avoids per-product inventory queries.
 
 **Screenshot Location:** `docs/screenshots/baseline/slow-query-2.png`
 
 ### 4.2 N+1 Query Problems
-- **Location:** [Service/Repository class and method]
-- **Description:** [What causes the N+1 problem]
-- **Impact:** [Performance degradation details]
+- **Location:** `ProductService.listProducts()` + `InventoryRepository.findQuantitiesByProductIds(...)`
+- **Description:** N+1 pattern for inventory lookup appears mitigated: product IDs are collected once and inventory is fetched with a single `IN` query.
+- **Impact:** Reduced DB round-trips compared to per-row inventory fetch.
 
 **Screenshot Location:** `docs/screenshots/baseline/n-plus-1-queries.png`
 
 ### 4.3 Hibernate Statistics
 ```
-Total Queries Executed: [TO BE MEASURED]
-Total Query Execution Time: [TO BE MEASURED]
-Cache Hit Ratio: [TO BE MEASURED]
-Second Level Cache Hits: [TO BE MEASURED]
-Second Level Cache Misses: [TO BE MEASURED]
+Total Queries Executed: [PARTIAL SAMPLE - REQUEST WINDOW ONLY]
+Total Query Execution Time: Product list query ~17 ms, inventory batch query ~3 ms
+Cache Hit Ratio: [NOT CAPTURED IN THIS QUICK RUN]
+Second Level Cache Hits: [NOT CAPTURED IN THIS QUICK RUN]
+Second Level Cache Misses: [NOT CAPTURED IN THIS QUICK RUN]
 ```
 
 **Screenshot Location:** `docs/screenshots/baseline/hibernate-stats.png`
