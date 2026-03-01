@@ -2,8 +2,9 @@ package com.eyarko.ecom.security;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -49,7 +50,13 @@ public class SecurityMetricsService {
      * Map tracking endpoint access frequency.
      * Key: "email:endpoint" or "ip:endpoint", Value: Access count
      */
-    private final ConcurrentHashMap<String, AtomicInteger> endpointAccessCounts = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Integer> endpointAccessCounts = new ConcurrentHashMap<>();
+
+    /**
+     * Snapshot-friendly alert history for diagnostics.
+     * CopyOnWriteArrayList is optimized for reads and safe iteration under concurrent writes.
+     */
+    private final CopyOnWriteArrayList<SecurityAlertRecord> securityAlerts = new CopyOnWriteArrayList<>();
     
     /**
      * Records a failed authentication attempt.
@@ -60,19 +67,32 @@ public class SecurityMetricsService {
      * @param ipAddress client IP address
      */
     public void recordFailedLogin(String email, String ipAddress) {
-        FailedAttemptRecord record = failedAttempts.computeIfAbsent(
-            ipAddress,
-            k -> new FailedAttemptRecord()
-        );
-        
-        record.increment();
+        Instant now = Instant.now();
+        FailedAttemptRecord record = failedAttempts.compute(ipAddress, (key, existing) -> {
+            if (existing == null) {
+                return new FailedAttemptRecord(1, now);
+            }
+            long minutesSinceFirst = ChronoUnit.MINUTES.between(existing.firstAttempt(), now);
+            if (minutesSinceFirst > BRUTE_FORCE_WINDOW_MINUTES) {
+                // Reset rolling window when the previous attempt is too old.
+                return new FailedAttemptRecord(1, now);
+            }
+            return new FailedAttemptRecord(existing.count() + 1, existing.firstAttempt());
+        });
         
         // Check if brute-force threshold is exceeded
-        if (record.getCount() >= MAX_FAILED_ATTEMPTS) {
-            long minutesSinceFirst = ChronoUnit.MINUTES.between(record.getFirstAttempt(), Instant.now());
+        if (record != null && record.count() >= MAX_FAILED_ATTEMPTS) {
+            long minutesSinceFirst = ChronoUnit.MINUTES.between(record.firstAttempt(), now);
             if (minutesSinceFirst <= BRUTE_FORCE_WINDOW_MINUTES) {
                 logger.warn("SECURITY_ALERT: Potential brute-force attack detected | ip={} | email={} | failedAttempts={} | windowMinutes={} | timestamp={}",
-                    ipAddress, email != null ? email : "unknown", record.getCount(), minutesSinceFirst, Instant.now());
+                    ipAddress, email != null ? email : "unknown", record.count(), minutesSinceFirst, now);
+                securityAlerts.add(new SecurityAlertRecord(
+                    now,
+                    "Brute-force threshold exceeded",
+                    ipAddress,
+                    email != null ? email : "unknown",
+                    record.count()
+                ));
             }
         }
     }
@@ -97,32 +117,46 @@ public class SecurityMetricsService {
         // Track by user email if authenticated
         if (email != null) {
             String key = email + ":" + endpoint;
-            endpointAccessCounts.computeIfAbsent(key, k -> new AtomicInteger(0)).incrementAndGet();
+            endpointAccessCounts.compute(key, (k, count) -> count == null ? 1 : count + 1);
         }
         
         // Track by IP address
         String ipKey = ipAddress + ":" + endpoint;
-        endpointAccessCounts.computeIfAbsent(ipKey, k -> new AtomicInteger(0)).incrementAndGet();
+        endpointAccessCounts.compute(ipKey, (k, count) -> count == null ? 1 : count + 1);
+    }
+
+    /**
+     * Returns the most recent security alerts for diagnostics and support triage.
+     *
+     * @param limit maximum number of latest alerts to return
+     * @return immutable snapshot of recent alerts
+     */
+    public List<SecurityAlertRecord> getRecentSecurityAlerts(int limit) {
+        if (limit <= 0 || securityAlerts.isEmpty()) {
+            return List.of();
+        }
+        int from = Math.max(0, securityAlerts.size() - limit);
+        return List.copyOf(securityAlerts.subList(from, securityAlerts.size()));
+    }
+
+    @Scheduled(fixedDelay = 300000)
+    void cleanupMetricsWindows() {
+        Instant cutoff = Instant.now().minus(BRUTE_FORCE_WINDOW_MINUTES, ChronoUnit.MINUTES);
+        failedAttempts.entrySet().removeIf(entry -> entry.getValue().firstAttempt().isBefore(cutoff));
+        securityAlerts.removeIf(alert -> alert.timestamp().isBefore(cutoff));
     }
     
     /**
      * Internal record for tracking failed login attempts.
      */
-    private static class FailedAttemptRecord {
-        private final AtomicInteger count = new AtomicInteger(0);
-        private final Instant firstAttempt = Instant.now();
-        
-        public void increment() {
-            count.incrementAndGet();
-        }
-        
-        public int getCount() {
-            return count.get();
-        }
-        
-        public Instant getFirstAttempt() {
-            return firstAttempt;
-        }
-    }
+    private record FailedAttemptRecord(int count, Instant firstAttempt) {}
+
+    public record SecurityAlertRecord(
+        Instant timestamp,
+        String reason,
+        String ipAddress,
+        String email,
+        int failedAttempts
+    ) {}
 }
 
