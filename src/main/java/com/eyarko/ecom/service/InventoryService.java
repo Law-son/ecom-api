@@ -25,15 +25,18 @@ public class InventoryService {
     private final InventoryRepository inventoryRepository;
     private final ProductRepository productRepository;
     private final CacheManager cacheManager;
+    private final InventoryLockManager inventoryLockManager;
 
     public InventoryService(
         InventoryRepository inventoryRepository,
         ProductRepository productRepository,
-        CacheManager cacheManager
+        CacheManager cacheManager,
+        InventoryLockManager inventoryLockManager
     ) {
         this.inventoryRepository = inventoryRepository;
         this.productRepository = productRepository;
         this.cacheManager = cacheManager;
+        this.inventoryLockManager = inventoryLockManager;
     }
 
     /**
@@ -47,11 +50,13 @@ public class InventoryService {
         Product product = productRepository.findById(request.getProductId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
 
-        Inventory inventory = inventoryRepository.findByProduct_Id(product.getId())
-            .orElseGet(() -> Inventory.builder().product(product).quantity(0).statusDisplay("Out of stock").build());
-        inventory.setQuantity(request.getQuantity());
-        inventory.setStatusDisplay(InventoryStatusDisplay.fromQuantity(inventory.getQuantity()));
-        Inventory saved = inventoryRepository.save(inventory);
+        Inventory saved = inventoryLockManager.withProductLock(product.getId(), () -> {
+            Inventory inventory = inventoryRepository.findByProductIdForUpdate(product.getId())
+                .orElseGet(() -> Inventory.builder().product(product).quantity(0).statusDisplay("Out of stock").build());
+            inventory.setQuantity(request.getQuantity());
+            inventory.setStatusDisplay(InventoryStatusDisplay.fromQuantity(inventory.getQuantity()));
+            return inventoryRepository.save(inventory);
+        });
         evictProductCaches(product.getId());
         return InventoryMapper.toResponse(saved);
     }

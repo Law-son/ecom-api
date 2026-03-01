@@ -39,15 +39,7 @@ public class TokenBlacklistService {
      * Key: SHA-256 hash of token, Value: Expiration timestamp
      */
     private final ConcurrentHashMap<String, Instant> blacklist = new ConcurrentHashMap<>();
-    private final MessageDigest digest;
-
-    public TokenBlacklistService() {
-        try {
-            this.digest = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException ex) {
-            throw new IllegalStateException("SHA-256 algorithm not available", ex);
-        }
-    }
+    private final ThreadLocal<MessageDigest> digest = ThreadLocal.withInitial(TokenBlacklistService::newSha256Digest);
 
     /**
      * Adds a token to the blacklist.
@@ -81,7 +73,7 @@ public class TokenBlacklistService {
         
         // If token has expired, remove it from blacklist
         if (expiration.isBefore(Instant.now())) {
-            blacklist.remove(tokenHash);
+            blacklist.remove(tokenHash, expiration);
             return false;
         }
         
@@ -98,10 +90,17 @@ public class TokenBlacklistService {
      * @return SHA-256 hash of the token (hex string)
      */
     private String hashToken(String token) {
-        synchronized (digest) {
-            digest.reset();
-            byte[] hashBytes = digest.digest(token.getBytes(StandardCharsets.UTF_8));
-            return bytesToHex(hashBytes);
+        MessageDigest messageDigest = digest.get();
+        messageDigest.reset();
+        byte[] hashBytes = messageDigest.digest(token.getBytes(StandardCharsets.UTF_8));
+        return bytesToHex(hashBytes);
+    }
+
+    private static MessageDigest newSha256Digest() {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 algorithm not available", ex);
         }
     }
 

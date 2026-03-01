@@ -23,10 +23,16 @@ public class AsyncOrderService {
     
     private final InventoryRepository inventoryRepository;
     private final CacheManager cacheManager;
+    private final InventoryLockManager inventoryLockManager;
 
-    public AsyncOrderService(InventoryRepository inventoryRepository, CacheManager cacheManager) {
+    public AsyncOrderService(
+        InventoryRepository inventoryRepository,
+        CacheManager cacheManager,
+        InventoryLockManager inventoryLockManager
+    ) {
         this.inventoryRepository = inventoryRepository;
         this.cacheManager = cacheManager;
+        this.inventoryLockManager = inventoryLockManager;
     }
 
     @Async("taskExecutor")
@@ -83,23 +89,27 @@ public class AsyncOrderService {
     }
 
     private void reserveInventory(OrderItem item) {
-        Inventory inventory = inventoryRepository.findByProduct_Id(item.getProduct().getId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Inventory not found"));
-        
-        int remaining = inventory.getQuantity() - item.getQuantity();
-        if (remaining < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient stock");
-        }
-        
-        inventory.setQuantity(remaining);
-        inventoryRepository.save(inventory);
+        inventoryLockManager.withProductLock(item.getProduct().getId(), () -> {
+            Inventory inventory = inventoryRepository.findByProductIdForUpdate(item.getProduct().getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Inventory not found"));
+
+            int remaining = inventory.getQuantity() - item.getQuantity();
+            if (remaining < 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient stock");
+            }
+
+            inventory.setQuantity(remaining);
+            inventoryRepository.save(inventory);
+        });
     }
 
     private void restoreInventory(OrderItem item) {
-        Inventory inventory = inventoryRepository.findByProduct_Id(item.getProduct().getId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Inventory not found"));
-        
-        inventory.setQuantity(inventory.getQuantity() + item.getQuantity());
-        inventoryRepository.save(inventory);
+        inventoryLockManager.withProductLock(item.getProduct().getId(), () -> {
+            Inventory inventory = inventoryRepository.findByProductIdForUpdate(item.getProduct().getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Inventory not found"));
+
+            inventory.setQuantity(inventory.getQuantity() + item.getQuantity());
+            inventoryRepository.save(inventory);
+        });
     }
 }

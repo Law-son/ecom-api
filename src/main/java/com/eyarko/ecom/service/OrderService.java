@@ -42,19 +42,22 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final InventoryRepository inventoryRepository;
     private final CacheManager cacheManager;
+    private final InventoryLockManager inventoryLockManager;
 
     public OrderService(
         OrderRepository orderRepository,
         UserRepository userRepository,
         ProductRepository productRepository,
         InventoryRepository inventoryRepository,
-        CacheManager cacheManager
+        CacheManager cacheManager,
+        InventoryLockManager inventoryLockManager
     ) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.inventoryRepository = inventoryRepository;
         this.cacheManager = cacheManager;
+        this.inventoryLockManager = inventoryLockManager;
     }
 
     /**
@@ -242,14 +245,16 @@ public class OrderService {
     }
 
     private void reserveInventory(OrderItem item) {
-        Inventory inventory = inventoryRepository.findByProduct_Id(item.getProduct().getId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Inventory not found"));
-        int remaining = inventory.getQuantity() - item.getQuantity();
-        if (remaining < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient stock");
-        }
-        inventory.setQuantity(remaining);
-        inventoryRepository.save(inventory);
+        inventoryLockManager.withProductLock(item.getProduct().getId(), () -> {
+            Inventory inventory = inventoryRepository.findByProductIdForUpdate(item.getProduct().getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Inventory not found"));
+            int remaining = inventory.getQuantity() - item.getQuantity();
+            if (remaining < 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient stock");
+            }
+            inventory.setQuantity(remaining);
+            inventoryRepository.save(inventory);
+        });
     }
 
     /** Returns item quantity to inventory (e.g. when order is cancelled). */
@@ -257,10 +262,12 @@ public class OrderService {
         if (item == null || item.getProduct() == null) {
             return;
         }
-        Inventory inventory = inventoryRepository.findByProduct_Id(item.getProduct().getId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Inventory not found"));
-        inventory.setQuantity(inventory.getQuantity() + item.getQuantity());
-        inventoryRepository.save(inventory);
+        inventoryLockManager.withProductLock(item.getProduct().getId(), () -> {
+            Inventory inventory = inventoryRepository.findByProductIdForUpdate(item.getProduct().getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Inventory not found"));
+            inventory.setQuantity(inventory.getQuantity() + item.getQuantity());
+            inventoryRepository.save(inventory);
+        });
     }
 
     private BigDecimal calculateTotal(List<OrderItem> items) {

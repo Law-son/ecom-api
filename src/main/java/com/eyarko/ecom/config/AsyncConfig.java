@@ -1,37 +1,46 @@
 package com.eyarko.ecom.config;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadPoolExecutor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import java.util.concurrent.Executor;
-
 @Configuration
 @EnableAsync
+@EnableConfigurationProperties(AsyncExecutorProperties.class)
 public class AsyncConfig {
 
     @Bean(name = "taskExecutor")
-    public Executor taskExecutor() {
+    public Executor taskExecutor(AsyncExecutorProperties properties, MeterRegistry meterRegistry) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        
-        // Core pool size: number of threads to keep alive
-        executor.setCorePoolSize(5);
-        
-        // Max pool size: maximum number of threads
-        executor.setMaxPoolSize(10);
-        
-        // Queue capacity: tasks waiting for execution
-        executor.setQueueCapacity(100);
-        
-        // Thread name prefix for debugging
-        executor.setThreadNamePrefix("async-");
-        
+
+        executor.setCorePoolSize(properties.getCorePoolSize());
+        executor.setMaxPoolSize(properties.getMaxPoolSize());
+        executor.setQueueCapacity(properties.getQueueCapacity());
+        executor.setKeepAliveSeconds(properties.getKeepAliveSeconds());
+        executor.setAllowCoreThreadTimeOut(properties.isAllowCoreThreadTimeout());
+        executor.setThreadNamePrefix(properties.getThreadNamePrefix());
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+
         // Graceful shutdown
         executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setAwaitTerminationSeconds(60);
-        
+        executor.setAwaitTerminationSeconds(properties.getAwaitTerminationSeconds());
+
         executor.initialize();
+
+        ExecutorServiceMetrics.monitor(
+            meterRegistry,
+            executor.getThreadPoolExecutor(),
+            "app.async.executor",
+            Tags.of("name", "taskExecutor")
+        );
+
         return executor;
     }
 }

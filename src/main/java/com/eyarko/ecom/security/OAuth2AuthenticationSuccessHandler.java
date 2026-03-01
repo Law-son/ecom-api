@@ -62,8 +62,9 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                 throw new IllegalStateException("No email from OAuth2 provider");
             }
             
-            user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new IllegalStateException("User not found: " + email));
+            final String resolvedEmail = email;
+            user = userRepository.findByEmailIgnoreCase(resolvedEmail)
+                .orElseThrow(() -> new IllegalStateException("User not found: " + resolvedEmail));
         }
 
         String accessToken = jwtService.generateToken(user);
